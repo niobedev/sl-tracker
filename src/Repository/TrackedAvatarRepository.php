@@ -45,4 +45,9 @@ class TrackedAvatarRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    public function findOneByAvatarKey(string $avatarKey): ?TrackedAvatar
+    {
+        return $this->findOneBy(['avatarKey' => strtolower($avatarKey)]);
+    }
 }

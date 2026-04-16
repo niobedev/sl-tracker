@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use App\Service\ApiAuthService;
+use Symfony\Component\HttpFoundation\Request;
 
 class ApiAuthServiceTest extends WebTestCase
 {
@@ -18,53 +19,48 @@ class ApiAuthServiceTest extends WebTestCase
 
     public function testValidApiKeyReturnsTrue(): void
     {
-        $request = $this->createMock(\Symfony\Component\HttpFoundation\Request::class);
-        $request->method('headers')->willReturn(new \Symfony\Component\HttpFoundation\HeaderBag([
-            'X-API-Key' => $this->testKey
-        ]));
-        
+        $request = new Request([], [], [], [], [], [
+            'HTTP_X_API_KEY' => $this->testKey
+        ]);
+
         $result = $this->service->validateApiKey($request);
         $this->assertTrue($result);
     }
 
     public function testInvalidApiKeyReturnsFalse(): void
     {
-        $request = $this->createMock(\Symfony\Component\HttpFoundation\Request::class);
-        $request->method('headers')->willReturn(new \Symfony\Component\HttpFoundation\HeaderBag([
-            'X-API-Key' => 'wrong-key'
-        ]));
-        
+        $request = new Request([], [], [], [], [], [
+            'HTTP_X_API_KEY' => 'wrong-key'
+        ]);
+
         $result = $this->service->validateApiKey($request);
         $this->assertFalse($result);
     }
 
     public function testMissingApiKeyReturnsFalse(): void
     {
-        $request = $this->createMock(\Symfony\Component\HttpFoundation\Request::class);
-        $request->method('headers')->willReturn(new \Symfony\Component\HttpFoundation\HeaderBag([]));
-        
+        $request = new Request([], [], [], [], [], []);
+
         $result = $this->service->validateApiKey($request);
         $this->assertFalse($result);
     }
 
     public function testEmptyApiKeyReturnsFalse(): void
     {
-        $request = $this->createMock(\Symfony\Component\HttpFoundation\Request::class);
-        $request->method('headers')->willReturn(new \Symfony\Component\HttpFoundation\HeaderBag([
-            'X-API-Key' => ''
-        ]));
-        
+        $request = new Request([], [], [], [], [], [
+            'HTTP_X_API_KEY' => ''
+        ]);
+
         $result = $this->service->validateApiKey($request);
         $this->assertFalse($result);
     }
 
     public function testApiKeyCaseSensitive(): void
     {
-        $request = $this->createMock(\Symfony\Component\HttpFoundation\Request::class);
-        $request->method('headers')->willReturn(new \Symfony\Component\HttpFoundation\HeaderBag([
-            'X-API-Key' => strtoupper($this->testKey)
-        ]));
-        
+        $request = new Request([], [], [], [], [], [
+            'HTTP_X_API-Key' => strtoupper($this->testKey)
+        ]);
+
         $result = $this->service->validateApiKey($request);
         $this->assertFalse($result);
     }

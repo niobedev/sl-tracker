@@ -59,7 +59,7 @@ class AvatarTrackingService
 
     public function toggleTracking(string $avatarKey, bool $enabled): void
     {
-        $avatar = $this->trackedAvatarRepository->find(strtolower($avatarKey));
+        $avatar = $this->trackedAvatarRepository->findOneByAvatarKey($avatarKey);
         if (!$avatar) {
             throw new \RuntimeException("Avatar {$avatarKey} not found");
         }
@@ -75,7 +75,7 @@ class AvatarTrackingService
 
     public function setNotificationChannel(string $avatarKey, ?int $channelId): void
     {
-        $avatar = $this->trackedAvatarRepository->find(strtolower($avatarKey));
+        $avatar = $this->trackedAvatarRepository->findOneByAvatarKey($avatarKey);
         if (!$avatar) {
             throw new \RuntimeException("Avatar {$avatarKey} not found");
         }
@@ -95,7 +95,7 @@ class AvatarTrackingService
 
     public function getAvatarWithProfile(string $avatarKey): ?array
     {
-        $avatar = $this->trackedAvatarRepository->findOneWithProfile(strtolower($avatarKey));
+        $avatar = $this->trackedAvatarRepository->findOneWithProfile($avatarKey);
         if (!$avatar) {
             return null;
         }

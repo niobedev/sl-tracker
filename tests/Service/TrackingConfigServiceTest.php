@@ -2,32 +2,23 @@
 
 namespace App\Tests\Service;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\ApiTestCase;
 use App\Entity\TrackedAvatar;
-use Doctrine\ORM\EntityManagerInterface;
 
-class TrackingConfigServiceTest extends WebTestCase
+class TrackingConfigServiceTest extends ApiTestCase
 {
     private $service;
-    private EntityManagerInterface $em;
 
     protected function setUp(): void
     {
-        self::bootKernel();
-        $this->service = self::getContainer()->get(\App\Service\TrackingConfigService::class);
-        $this->em = self::getContainer()->get('doctrine')->getManager();
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        $this->em->close();
+        parent::setUp();
+        $this->service = self::$client->getContainer()->get(\App\Service\TrackingConfigService::class);
     }
 
     public function testGetConfigReturnsEmptyWhenNoAvatars(): void
     {
         $config = $this->service->getConfig();
-        
+
         $this->assertIsArray($config);
         $this->assertArrayHasKey('trackedAvatars', $config);
         $this->assertArrayHasKey('version', $config);
@@ -42,17 +33,17 @@ class TrackingConfigServiceTest extends WebTestCase
         $avatar1 = new TrackedAvatar();
         $avatar1->setAvatarKey('11111111-1111-1111-1111-111111111111');
         $avatar1->setTrackingEnabled(true);
-        $this->em->persist($avatar1);
-        
+        $this->entityManager->persist($avatar1);
+
         $avatar2 = new TrackedAvatar();
         $avatar2->setAvatarKey('22222222-2222-2222-2222-222222222222');
         $avatar2->setTrackingEnabled(false);
-        $this->em->persist($avatar2);
-        
-        $this->em->flush();
-        
+        $this->entityManager->persist($avatar2);
+
+        $this->entityManager->flush();
+
         $config = $this->service->getConfig();
-        
+
         $this->assertCount(1, $config['trackedAvatars']);
         $this->assertContains('11111111-1111-1111-1111-111111111111', $config['trackedAvatars']);
         $this->assertNotContains('22222222-2222-2222-2222-222222222222', $config['trackedAvatars']);
@@ -62,25 +53,25 @@ class TrackingConfigServiceTest extends WebTestCase
     {
         $config1 = $this->service->getConfig();
         $version1 = $config1['version'];
-        
+
         $this->service->incrementVersion();
-        
+
         $config2 = $this->service->getConfig();
         $version2 = $config2['version'];
-        
+
         $this->assertGreaterThan($version1, $version2);
     }
 
     public function testIncrementVersionMultipleTimes(): void
     {
         $version1 = $this->service->getVersion();
-        
+
         $this->service->incrementVersion();
         $this->service->incrementVersion();
         $this->service->incrementVersion();
-        
+
         $version2 = $this->service->getVersion();
-        
+
         $this->assertEquals($version1 + 3, $version2);
     }
 
@@ -88,7 +79,7 @@ class TrackingConfigServiceTest extends WebTestCase
     {
         $this->service->setPollInterval(30);
         $config = $this->service->getConfig();
-        
+
         $this->assertEquals(30, $config['pollInterval']);
     }
 
@@ -96,7 +87,7 @@ class TrackingConfigServiceTest extends WebTestCase
     {
         $this->service->setPollInterval(5);
         $config = $this->service->getConfig();
-        
+
         // Should be clamped to minimum of 10
         $this->assertEquals(10, $config['pollInterval']);
     }
@@ -105,7 +96,7 @@ class TrackingConfigServiceTest extends WebTestCase
     {
         $this->service->setPollInterval(300);
         $config = $this->service->getConfig();
-        
+
         $this->assertEquals(300, $config['pollInterval']);
     }
 }

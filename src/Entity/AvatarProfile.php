@@ -17,6 +17,9 @@ class AvatarProfile
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $name = null;
 
+    #[ORM\Column(name: 'username', length: 255, nullable: true)]
+    private ?string $username = null;
+
     #[ORM\Column(name: 'image_url', type: Types::TEXT, nullable: true)]
     private ?string $imageUrl = null;
 
@@ -34,6 +37,9 @@ class AvatarProfile
 
     public function getName(): ?string { return $this->name; }
     public function setName(?string $name): static { $this->name = $name; return $this; }
+
+    public function getUsername(): ?string { return $this->username; }
+    public function setUsername(?string $username): static { $this->username = $username; return $this; }
 
     public function getImageUrl(): ?string { return $this->imageUrl; }
     public function setImageUrl(?string $imageUrl): static { $this->imageUrl = $imageUrl; return $this; }

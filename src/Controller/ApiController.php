@@ -168,7 +168,7 @@ class ApiController extends AbstractController
     public function receiveEvents(Request $request): JsonResponse
     {
         if (!$this->apiAuthService->validateApiKey($request)) {
-            throw new AccessDeniedHttpException('Invalid API key');
+            return $this->json(['error' => 'Invalid API key'], Response::HTTP_UNAUTHORIZED);
         }
 
         $events = json_decode($request->getContent(), true);
@@ -176,15 +176,26 @@ class ApiController extends AbstractController
             return $this->json(['error' => 'Invalid request body'], Response::HTTP_BAD_REQUEST);
         }
 
+        if (empty($events)) {
+            return $this->json(['error' => 'No events provided'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $hasErrors = false;
         $received = 0;
         foreach ($events as $event) {
             $result = $this->processEvent($event);
-            if ($result) {
+            if ($result === true) {
                 $received++;
+            } elseif ($result === false) {
+                $hasErrors = true;
             }
         }
 
         $this->em->flush();
+
+        if ($hasErrors && $received === 0) {
+            return $this->json(['error' => 'All events failed validation'], Response::HTTP_BAD_REQUEST);
+        }
 
         return $this->json(['received' => $received], Response::HTTP_CREATED);
     }
@@ -193,7 +204,7 @@ class ApiController extends AbstractController
     public function getTrackingConfig(Request $request): JsonResponse
     {
         if (!$this->apiAuthService->validateApiKey($request)) {
-            throw new AccessDeniedHttpException('Invalid API key');
+            return $this->json(['error' => 'Invalid API key'], Response::HTTP_UNAUTHORIZED);
         }
 
         return $this->json($this->trackingConfigService->getConfig());

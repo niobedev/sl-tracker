@@ -16,24 +16,53 @@ abstract class ApiTestCase extends WebTestCase
 
     protected function setUp(): void
     {
-        self::$client = static::createClient();
-        $kernel = self::$kernel;
-        $this->entityManager = $kernel->getContainer()
-            ->get('doctrine')
-            ->getManager();
+        parent::setUp();
+        self::$client = static::createClient(['debug' => false]);
+
+        $kernel = self::$kernel ?? self::bootKernel();
+        $this->entityManager = $kernel->getContainer()->get('doctrine')->getManager();
+
+        $this->entityManager->getConnection()->executeStatement('PRAGMA foreign_keys = OFF');
+
+        $schemaTool = new \Doctrine\ORM\Tools\SchemaTool($this->entityManager);
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+
+        try {
+            $schemaTool->dropSchema($metadata);
+        } catch (\Exception $e) {
+        }
+
+        $schemaTool->createSchema($metadata);
+
+        $this->entityManager->getConnection()->executeStatement('PRAGMA foreign_keys = ON');
+
+        $this->mockSecondLifeProfileService();
+    }
+
+    protected function mockSecondLifeProfileService(): void
+    {
+        $profileService = $this->createMock(\App\Service\SecondLifeProfileService::class);
+        $profileService->method('fetchProfile')
+            ->willReturn([
+                'bioHtml' => '<p>Test bio</p>',
+                'imageUrl' => 'https://example.com/image.jpg',
+                'syncedAt' => new \DateTimeImmutable(),
+            ]);
+
+        self::$client->getContainer()->set('App\Service\SecondLifeProfileService', $profileService);
     }
 
     protected function tearDown(): void
     {
-        parent::tearDown();
         $this->entityManager->close();
+        parent::tearDown();
     }
 
     protected function createAuthenticatedClient(): void
     {
         $user = $this->entityManager->getRepository(User::class)
             ->findOneBy(['username' => 'testuser']);
-        
+
         if (!$user) {
             $user = new User();
             $user->setUsername('testuser');
@@ -57,11 +86,11 @@ abstract class ApiTestCase extends WebTestCase
         return self::$client;
     }
 
-    protected function assertApiResponse(int $expectedStatus, array $expectedData = null): void
+    protected function assertApiResponse(int $expectedStatus, ?array $expectedData = null): void
     {
         $response = self::$client->getResponse();
         $this->assertEquals($expectedStatus, $response->getStatusCode());
-        
+
         if ($expectedData !== null) {
             $data = json_decode($response->getContent(), true);
             $this->assertEquals($expectedData, $data);
@@ -71,7 +100,7 @@ abstract class ApiTestCase extends WebTestCase
     protected function createTestAvatar(string $key, bool $enabled = true): TrackedAvatar
     {
         $avatar = new TrackedAvatar();
-        $avatar->setAvatarKey($key);
+        $avatar->setAvatarKey(strtolower($key));
         $avatar->setTrackingEnabled($enabled);
         $this->entityManager->persist($avatar);
         $this->entityManager->flush();

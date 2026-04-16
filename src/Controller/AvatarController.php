@@ -23,17 +23,19 @@ class AvatarController extends AbstractController
         private readonly EntityManagerInterface $em,
     ) {}
 
-    private function validateApi(Request $request): void
+    private function validateApi(Request $request): ?JsonResponse
     {
         if (!$this->apiAuthService->validateApiKey($request)) {
-            throw new AccessDeniedHttpException('Invalid API key');
+            return $this->json(['error' => 'Invalid API key'], Response::HTTP_UNAUTHORIZED);
         }
+        return null;
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $avatars = $this->trackedAvatarRepository->findAllWithProfile();
         $data = array_map(function ($avatar) {
@@ -57,7 +59,8 @@ class AvatarController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $data = json_decode($request->getContent(), true);
         if (!isset($data['avatarKey'])) {
@@ -82,7 +85,8 @@ class AvatarController extends AbstractController
     #[Route('/{key}', name: 'delete', methods: ['DELETE'], requirements: ['key' => '[0-9a-f\-]+'])]
     public function delete(Request $request, string $key): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         try {
             $this->avatarTrackingService->removeAvatar($key);
@@ -95,7 +99,8 @@ class AvatarController extends AbstractController
     #[Route('/{key}', name: 'update', methods: ['PATCH'], requirements: ['key' => '[0-9a-f\-]+'])]
     public function update(Request $request, string $key): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $data = json_decode($request->getContent(), true);
         $avatar = $this->trackedAvatarRepository->find(strtolower($key));
@@ -104,12 +109,13 @@ class AvatarController extends AbstractController
             return $this->json(['error' => 'Avatar not found'], Response::HTTP_NOT_FOUND);
         }
 
+        $lowerKey = strtolower($key);
         if (isset($data['trackingEnabled'])) {
-            $this->avatarTrackingService->toggleTracking($key, (bool)$data['trackingEnabled']);
+            $this->avatarTrackingService->toggleTracking($lowerKey, (bool)$data['trackingEnabled']);
         }
 
         if (array_key_exists('notificationChannelId', $data)) {
-            $this->avatarTrackingService->setNotificationChannel($key, $data['notificationChannelId'] ?? null);
+            $this->avatarTrackingService->setNotificationChannel($lowerKey, $data['notificationChannelId'] ?? null);
         }
 
         $this->em->refresh($avatar);

@@ -24,17 +24,19 @@ class NotificationChannelController extends AbstractController
         private readonly EntityManagerInterface $em,
     ) {}
 
-    private function validateApi(Request $request): void
+    private function validateApi(Request $request): ?JsonResponse
     {
         if (!$this->apiAuthService->validateApiKey($request)) {
-            throw new AccessDeniedHttpException('Invalid API key');
+            return $this->json(['error' => 'Invalid API key'], Response::HTTP_UNAUTHORIZED);
         }
+        return null;
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $channels = $this->channelRepository->findAll();
         $data = array_map(function ($channel) {
@@ -55,7 +57,8 @@ class NotificationChannelController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $data = json_decode($request->getContent(), true);
         if (!isset($data['name']) || !isset($data['type']) || !isset($data['config'])) {
@@ -88,7 +91,8 @@ class NotificationChannelController extends AbstractController
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(Request $request, int $id): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $channel = $this->channelRepository->find($id);
         if (!$channel) {
@@ -122,7 +126,8 @@ class NotificationChannelController extends AbstractController
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(Request $request, int $id): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $channel = $this->channelRepository->find($id);
         if (!$channel) {
@@ -138,7 +143,8 @@ class NotificationChannelController extends AbstractController
     #[Route('/{id}/test', name: 'test', methods: ['POST'])]
     public function test(Request $request, int $id): JsonResponse
     {
-        $this->validateApi($request);
+        $error = $this->validateApi($request);
+        if ($error) return $error;
 
         $channel = $this->channelRepository->find($id);
         if (!$channel) {
