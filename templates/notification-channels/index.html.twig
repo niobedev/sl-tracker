@@ -1,0 +1,428 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Notification Channels{% endblock %}
+
+{% block body %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Notification Channels</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Configure where to send avatar login/logout notifications</p>
+        </div>
+        <button onclick="showAddModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+            Add Channel
+        </button>
+    </div>
+
+    <!-- Channels List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for channel in channels %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-start justify-between">
+                <div class="flex items-center">
+                    {% if channel.type == 'telegram' %}
+                    <svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 11.944 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    {% else %}
+                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    {% endif %}
+                    <div class="ml-3">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ channel.name }}</h3>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ channel.enabled ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">
+                            {{ channel.enabled ? 'Active' : 'Disabled' }}
+                        </span>
+                    </div>
+                </div>
+                <button onclick="showEditModal({{ channel.id }}, '{{ channel.name|e('js') }}', '{{ channel.type|e('js') }}', {{ channel.enabled ? 'true' : 'false' }})"
+                        class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="mt-4 space-y-2">
+                <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Type: <span class="ml-1 font-medium text-gray-700 dark:text-gray-300">{{ channel.type|capitalize }}</span>
+                </div>
+                <div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Added: <time datetime="{{ channel.createdAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local class="ml-1">{{ channel.createdAt|date('Y-m-d') }}</time>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex space-x-3">
+                <button onclick="testChannel({{ channel.id }})"
+                        class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    Test
+                </button>
+                <button onclick="deleteChannel({{ channel.id }})"
+                        class="px-3 py-2 border border-red-300 dark:border-red-600 rounded-md text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No notification channels</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding your first notification channel.</p>
+            <div class="mt-6">
+                <button onclick="showAddModal()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                    Add Channel
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Channel Modal -->
+<div id="addModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add Notification Channel</h3>
+                <button onclick="hideAddModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="addChannelForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="channelName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Name
+                        </label>
+                        <input type="text" 
+                               id="channelName" 
+                               name="name"
+                               placeholder="My Telegram Channel"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                               required>
+                    </div>
+                    <div>
+                        <label for="channelType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Type
+                        </label>
+                        <select id="channelType" 
+                                name="type"
+                                onchange="toggleTypeSpecificFields()"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                                required>
+                            <option value="telegram">Telegram</option>
+                            <option value="discord" disabled>Discord (Coming Soon)</option>
+                            <option value="matrix" disabled>Matrix (Coming Soon)</option>
+                        </select>
+                    </div>
+                    <div id="telegramFields">
+                        <div>
+                            <label for="botToken" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Bot Token
+                            </label>
+                            <input type="text" 
+                                   id="botToken" 
+                                   name="botToken"
+                                   placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
+                                   required>
+                        </div>
+                        <div class="mt-4">
+                            <label for="chatId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Chat ID
+                            </label>
+                            <input type="text" 
+                                   id="chatId" 
+                                   name="chatId"
+                                   placeholder="123456789"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               id="channelEnabled" 
+                               name="enabled"
+                               checked
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="channelEnabled" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable this channel
+                        </label>
+                    </div>
+                </div>
+                <div id="addError" class="mt-2 text-sm text-red-600 hidden"></div>
+                <div class="mt-5 sm:mt-6 flex justify-end space-x-3">
+                    <button type="button" 
+                            onclick="hideAddModal()" 
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            id="addSubmitBtn"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        Add Channel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Channel Modal -->
+<div id="editModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Edit Notification Channel</h3>
+                <button onclick="hideEditModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="editChannelForm">
+                <input type="hidden" id="editChannelId" name="id">
+                <div class="space-y-4">
+                    <div>
+                        <label for="editChannelName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Name
+                        </label>
+                        <input type="text" 
+                               id="editChannelName" 
+                               name="name"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
+                               required>
+                    </div>
+                    <div id="editTelegramFields">
+                        <div>
+                            <label for="editBotToken" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Bot Token
+                            </label>
+                            <input type="text" 
+                                   id="editBotToken" 
+                                   name="botToken"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
+                                   required>
+                        </div>
+                        <div class="mt-4">
+                            <label for="editChatId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Chat ID
+                            </label>
+                            <input type="text" 
+                                   id="editChatId" 
+                                   name="chatId"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               id="editChannelEnabled" 
+                               name="enabled"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="editChannelEnabled" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable this channel
+                        </label>
+                    </div>
+                </div>
+                <div id="editError" class="mt-2 text-sm text-red-600 hidden"></div>
+                <div class="mt-5 sm:mt-6 flex justify-end space-x-3">
+                    <button type="button" 
+                            onclick="hideEditModal()" 
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            id="editSubmitBtn"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAddModal() {
+    document.getElementById('addModal').classList.remove('hidden');
+    document.getElementById('channelName').focus();
+}
+
+function hideAddModal() {
+    document.getElementById('addModal').classList.add('hidden');
+    document.getElementById('addChannelForm').reset();
+    document.getElementById('addError').classList.add('hidden');
+}
+
+function showEditModal(id, name, type, enabled) {
+    document.getElementById('editChannelId').value = id;
+    document.getElementById('editChannelName').value = name;
+    document.getElementById('editChannelEnabled').checked = enabled;
+    document.getElementById('editModal').classList.remove('hidden');
+}
+
+function hideEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+    document.getElementById('editError').classList.add('hidden');
+}
+
+function toggleTypeSpecificFields() {
+    const type = document.getElementById('channelType').value;
+    const telegramFields = document.getElementById('telegramFields');
+    
+    if (type === 'telegram') {
+        telegramFields.classList.remove('hidden');
+        document.getElementById('botToken').required = true;
+        document.getElementById('chatId').required = true;
+    } else {
+        telegramFields.classList.add('hidden');
+        document.getElementById('botToken').required = false;
+        document.getElementById('chatId').required = false;
+    }
+}
+
+document.getElementById('addChannelForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        name: document.getElementById('channelName').value,
+        type: document.getElementById('channelType').value,
+        config: {
+            bot_token: document.getElementById('botToken').value,
+            chat_id: document.getElementById('chatId').value
+        },
+        enabled: document.getElementById('channelEnabled').checked
+    };
+    
+    const errorDiv = document.getElementById('addError');
+    const submitBtn = document.getElementById('addSubmitBtn');
+    
+    errorDiv.classList.add('hidden');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding...';
+    
+    try {
+        const response = await fetch('/notification-channels', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to add channel');
+        }
+        
+        hideAddModal();
+        window.location.reload();
+    } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Channel';
+    }
+});
+
+document.getElementById('editChannelForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('editChannelId').value;
+    const formData = {
+        name: document.getElementById('editChannelName').value,
+        config: {
+            bot_token: document.getElementById('editBotToken').value,
+            chat_id: document.getElementById('editChatId').value
+        },
+        enabled: document.getElementById('editChannelEnabled').checked
+    };
+    
+    const errorDiv = document.getElementById('editError');
+    const submitBtn = document.getElementById('editSubmitBtn');
+    
+    errorDiv.classList.add('hidden');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+    
+    try {
+        const response = await fetch(`/notification-channels/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to update channel');
+        }
+        
+        hideEditModal();
+        window.location.reload();
+    } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Changes';
+    }
+});
+
+async function testChannel(id) {
+    if (!confirm('Send a test notification to this channel?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/notification-channels/${id}/test`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Test notification sent successfully!');
+        } else {
+            alert('Failed to send test notification: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function deleteChannel(id) {
+    if (!confirm('Are you sure you want to delete this channel?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/notification-channels/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete channel');
+        }
+        
+        window.location.reload();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

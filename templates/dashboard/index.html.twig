@@ -1,0 +1,81 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard — Avatar Tracking System{% endblock %}
+
+{% block body %}
+<div class="space-y-6">
+
+    {# Header #}
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold">Avatar Activity Dashboard</h1>
+            <p class="text-sm text-gray-500 mt-1">Track Second Life avatar login/logout events</p>
+        </div>
+    </div>
+
+    {# Row 1: Activity + Online Now #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Recent Activity</h2>
+            <div id="recent-visitors"></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Online Now</h2>
+            <div id="live-visitors"></div>
+        </div>
+    </div>
+
+    {# Row 2: Leaderboard (full width) #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-base font-semibold mb-4">Top Avatars by Online Time</h2>
+        <div id="chart-leaderboard"></div>
+    </div>
+
+    {# Row 3: Heatmap (full width) #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-base font-semibold mb-4">Activity Heatmap — Hour of Day × Day of Week</h2>
+        <div id="chart-heatmap" style="min-height:240px;"></div>
+    </div>
+
+    {# Row 4: Peak Hours + Day of Week #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Peak Hours</h2>
+            <div id="chart-hourly" style="min-height:280px;"></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Day of Week Activity</h2>
+            <div id="chart-weekday" style="min-height:280px;"></div>
+        </div>
+    </div>
+
+    {# Row 5: Daily Activity (full width) #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-base font-semibold mb-4">Daily Activity Count</h2>
+        <div id="chart-daily" style="min-height:280px;"></div>
+    </div>
+
+    {# Row 6: Duration Distribution + New vs Returning #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Session Duration Distribution</h2>
+            <div id="chart-duration" style="min-height:300px;"></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">New vs Returning Avatars</h2>
+            <div id="chart-newreturning" style="min-height:300px;"></div>
+        </div>
+    </div>
+
+    {# Row 7: Frequency vs Duration scatter (full width) #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-base font-semibold mb-4">Login Frequency vs Avg Session Duration</h2>
+        <div id="chart-scatter" style="min-height:320px;"></div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/assets/app.js"></script>
+{% endblock %}

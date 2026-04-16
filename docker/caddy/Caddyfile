@@ -1,0 +1,14 @@
+:80 {
+    root * /var/www/html/public
+    encode gzip
+
+    # Static assets — long cache
+    @static {
+        path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
+    }
+    header @static Cache-Control "public, max-age=31536000, immutable"
+
+    php_fastcgi localhost:9000
+
+    file_server
+}

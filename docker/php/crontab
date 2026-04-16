@@ -1,0 +1,2 @@
+# Sync Google Sheet every minute
+* * * * * www-data cd /var/www/html && php bin/console app:sync-sheet >> /var/log/sync.log 2>&1

@@ -1,0 +1,638 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ stats.display_name }} — Avatar Tracking System{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<style>
+/* ── EasyMDE dark theme ────────────────────────────────────────────────────── */
+.EasyMDEContainer .editor-toolbar {
+    background: #1f2937;
+    border-color: #374151;
+    opacity: 1;
+}
+.EasyMDEContainer .editor-toolbar button {
+    color: #9ca3af !important;
+    border: none;
+}
+.EasyMDEContainer .editor-toolbar button:hover,
+.EasyMDEContainer .editor-toolbar button.active {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb !important;
+}
+.EasyMDEContainer .editor-toolbar i.separator {
+    border-color: #4b5563;
+}
+.EasyMDEContainer .editor-toolbar.disabled-for-preview button:not(.no-disable) {
+    color: #4b5563 !important;
+}
+.EasyMDEContainer .CodeMirror {
+    background: #111827;
+    border-color: #374151;
+    color: #e5e7eb;
+    caret-color: #e5e7eb;
+}
+.EasyMDEContainer .CodeMirror-scroll {
+    background: #111827;
+}
+.EasyMDEContainer .CodeMirror-cursor {
+    border-left-color: #e5e7eb;
+}
+.EasyMDEContainer .CodeMirror-selected {
+    background: #312e81 !important;
+}
+.EasyMDEContainer .CodeMirror-line ::selection {
+    background: #312e81;
+}
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+}
+.EasyMDEContainer .editor-preview a,
+.EasyMDEContainer .editor-preview-side a {
+    color: #818cf8;
+}
+.EasyMDEContainer .editor-preview pre,
+.EasyMDEContainer .editor-preview-side pre {
+    background: #111827;
+}
+.EasyMDEContainer .editor-preview code,
+.EasyMDEContainer .editor-preview-side code {
+    background: #374151;
+}
+/* CodeMirror markdown syntax colors */
+.EasyMDEContainer .cm-s-easymde .cm-header { color: #a5b4fc; font-weight: bold; }
+.EasyMDEContainer .cm-s-easymde .cm-strong { color: #f9a8d4; font-weight: bold; }
+.EasyMDEContainer .cm-s-easymde .cm-em     { color: #86efac; font-style: italic; }
+.EasyMDEContainer .cm-s-easymde .cm-link   { color: #818cf8; }
+.EasyMDEContainer .cm-s-easymde .cm-url    { color: #6ee7b7; }
+.EasyMDEContainer .cm-s-easymde .cm-comment{ color: #9ca3af; }
+/* Border wrapper */
+.EasyMDEContainer .CodeMirror,
+.EasyMDEContainer .editor-toolbar {
+    border-radius: 0;
+}
+.EasyMDEContainer .editor-toolbar:first-child {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+.EasyMDEContainer .CodeMirror:last-child {
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="space-y-8">
+
+    {# Back link #}
+    <a href="{{ path('app_dashboard') }}" class="text-sm text-indigo-500 hover:underline">&larr; Back to Dashboard</a>
+
+    {# Profile header #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
+         id="avatar-profile-card"
+         data-stale="{{ profile_is_stale ? '1' : '0' }}"
+         data-synced-at="{{ sl_profile ? sl_profile.syncedAt|date('U') : '0' }}">
+        <div class="flex items-start gap-5">
+            {% if sl_profile and sl_profile.imageUrl %}
+            <img id="avatar-profile-image"
+                 src="{{ path('app_avatar_picture', {key: avatar_key}) }}"
+                 alt="{{ stats.display_name }}"
+                 style="width:256px;height:192px;transition:opacity 0.4s;"
+                 class="rounded-xl flex-shrink-0 border border-gray-200 dark:border-gray-600">
+            {% endif %}
+            <div class="flex-1 min-w-0">
+                <h1 class="text-2xl font-bold">{{ stats.display_name }}</h1>
+                <p class="text-sm text-gray-500 mt-1">{{ stats.username }} &bull; Key: {{ avatar_key }}</p>
+                {% if sl_profile and sl_profile.syncedAt %}
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Profile synced: <time id="avatar-profile-synced-time" datetime="{{ sl_profile.syncedAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local>{{ sl_profile.syncedAt|date('Y-m-d H:i') }} UTC</time></p>
+                {% endif %}
+                <div id="avatar-profile-bio" class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    {% if sl_profile and sl_profile.bioHtml %}{{ sl_profile.bioHtml|raw }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-indigo-500">{{ stats.visit_count }}</div>
+                <div class="text-xs text-gray-500 mt-1">Login Sessions</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-indigo-500">{{ (stats.total_minutes / 60)|number_format(1) }}h</div>
+                <div class="text-xs text-gray-500 mt-1">Total Online Time</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-indigo-500">{{ stats.avg_minutes|number_format(0) }}m</div>
+                <div class="text-xs text-gray-500 mt-1">Avg Session</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-indigo-500">{{ stats.last_visit|date('M d') }}</div>
+                <div class="text-xs text-gray-500 mt-1">Last Seen</div>
+            </div>
+        </div>
+    </div>
+
+    {# Flash messages (shared for notes + reminders) #}
+    {% for flash in app.flashes('success') %}
+    <div class="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm rounded-lg">{{ flash }}</div>
+    {% endfor %}
+    {% for flash in app.flashes('error') %}
+    <div class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded-lg">{{ flash }}</div>
+    {% endfor %}
+
+    {# Notes + Reminders side by side #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {# Notes #}
+        <div id="notes" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col">
+            <h2 class="text-base font-semibold mb-4">Notes</h2>
+
+            {% if notes|length > 0 %}
+            <div class="space-y-4 mb-6 flex-1">
+                {% for note in notes %}
+                <div class="pb-4 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <div class="prose dark:prose-invert prose-sm max-w-none text-gray-800 dark:text-gray-200">
+                        {{ note.html|raw }}
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-xs text-gray-400">
+                            By <strong>{{ note.entity.author.username }}</strong>
+                            &bull;
+                            <time datetime="{{ note.entity.createdAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local>{{ note.entity.createdAt|date('Y-m-d H:i') }} UTC</time>
+                            {% if note.entity.updatedAt %}
+                                (edited <time datetime="{{ note.entity.updatedAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local>{{ note.entity.updatedAt|date('Y-m-d H:i') }} UTC</time>)
+                            {% endif %}
+                        </span>
+                        {% if app.user and app.user.id == note.entity.author.id %}
+                        <button
+                            onclick="openEditNote({{ note.entity.id }}, {{ note.entity.content|json_encode }}, '{{ csrf_token('note_edit_' ~ note.entity.id) }}', '{{ csrf_token('note_delete_' ~ note.entity.id) }}')"
+                            class="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors">
+                            Edit
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 mb-6">No notes yet.</p>
+            {% endif %}
+
+            <div class="mt-auto">
+                <button type="button" id="note-add-btn" onclick="showNoteAdd()"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                    + Add Note
+                </button>
+                <div id="note-add-wrapper" class="hidden">
+                    <form method="post" action="{{ path('note_new', {key: avatar_key}) }}" id="note-add-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('note_new_' ~ avatar_key) }}">
+                        <textarea id="note-add-content" name="content"></textarea>
+                        <div class="mt-2 flex gap-2">
+                            <button type="submit"
+                                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                                Add Note
+                            </button>
+                            <button type="button" onclick="hideNoteAdd()"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# Reminders #}
+        <div id="reminders" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col">
+            <h2 class="text-base font-semibold mb-4">Reminders</h2>
+
+            {# Active reminders #}
+            {% set active_count = 0 %}
+            {% for reminder in reminders %}{% if not reminder.entity.resolved %}{% set active_count = active_count + 1 %}{% endif %}{% endfor %}
+
+            {% if active_count > 0 %}
+            <div class="space-y-3 mb-4 flex-1">
+                {% for reminder in reminders %}
+                {% if not reminder.entity.resolved %}
+                <div class="p-3 rounded-xl border {{ reminder.entity.overdue ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-600' }}">
+                    <div class="prose dark:prose-invert prose-sm max-w-none text-gray-800 dark:text-gray-200">
+                        {{ reminder.html|raw }}
+                    </div>
+                    <div class="flex items-center justify-between mt-2 flex-wrap gap-2">
+                        <span class="text-xs {{ reminder.entity.overdue ? 'text-red-500' : 'text-gray-400' }}">
+                            <strong>Due:</strong>
+                            <time datetime="{{ reminder.entity.reminderAt|date('Y-m-d\\TH:i:s\\Z') }}"
+                                  data-countdown
+                                  data-local>{{ reminder.entity.reminderAt|date('Y-m-d H:i') }} UTC</time>
+                            &bull; By {{ reminder.entity.author.username }}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            {% if app.user and app.user.id == reminder.entity.author.id %}
+                            <button
+                                onclick="openEditReminder({{ reminder.entity.id }}, {{ reminder.entity.content|json_encode }}, '{{ reminder.entity.reminderAt|date('Y-m-d\\TH:i:s\\Z') }}', '{{ csrf_token('reminder_edit_' ~ reminder.entity.id) }}', '{{ csrf_token('reminder_delete_' ~ reminder.entity.id) }}')"
+                                class="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors">
+                                Edit
+                            </button>
+                            {% endif %}
+                            <form method="post" action="{{ path('reminder_resolve', {key: avatar_key, id: reminder.entity.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('reminder_resolve_' ~ reminder.entity.id) }}">
+                                <button type="submit"
+                                    class="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors">
+                                    Mark Done
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 mb-4">No active reminders.</p>
+            {% endif %}
+
+            {# Resolved reminders #}
+            {% set resolved_reminders = [] %}
+            {% for reminder in reminders %}{% if reminder.entity.resolved %}{% set resolved_reminders = resolved_reminders|merge([reminder]) %}{% endif %}{% endfor %}
+            {% if resolved_reminders|length > 0 %}
+            <details class="mb-4">
+                <summary class="text-sm text-gray-500 cursor-pointer select-none hover:text-gray-400 transition-colors">
+                    Resolved ({{ resolved_reminders|length }})
+                </summary>
+                <div class="mt-3 space-y-2">
+                    {% for reminder in resolved_reminders %}
+                    <div class="p-3 rounded-xl border border-gray-100 dark:border-gray-700 opacity-60">
+                        <div class="prose dark:prose-invert prose-sm max-w-none text-gray-700 dark:text-gray-300">
+                            {{ reminder.html|raw }}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            <span class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">✓ Done</span>
+                            by {{ reminder.entity.resolvedBy ? reminder.entity.resolvedBy.username : '(deleted user)' }}
+                            at <time datetime="{{ reminder.entity.resolvedAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local>{{ reminder.entity.resolvedAt|date('Y-m-d H:i') }} UTC</time>
+                            &bull; Created by {{ reminder.entity.author.username }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            <div class="mt-auto">
+                <button type="button" id="reminder-add-btn" onclick="showReminderAdd()"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                    + Add Reminder
+                </button>
+                <div id="reminder-add-wrapper" class="hidden">
+                    <form method="post" action="{{ path('reminder_new', {key: avatar_key}) }}" id="reminder-add-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('reminder_new_' ~ avatar_key) }}">
+                        <textarea id="reminder-add-content" name="content"></textarea>
+                        <div class="mt-2 flex items-end gap-3 flex-wrap">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Remind at (your local time)</label>
+                                <input type="datetime-local" id="reminder-at-local"
+                                    class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="hidden" id="reminder-at-utc" name="reminder_at">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit"
+                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                                    Add Reminder
+                                </button>
+                                <button type="button" onclick="hideReminderAdd()"
+                                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>{# end notes+reminders grid #}
+
+    {# Charts row #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Favorite Hours</h2>
+            <div id="chart-avatar-hourly" style="min-height:280px;"></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Recent Session History</h2>
+            <div id="chart-avatar-history" style="min-height:280px;"></div>
+        </div>
+    </div>
+
+    {# Edit reminder modal #}
+    <div id="edit-reminder-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl">
+            <h3 class="text-base font-semibold mb-3">Edit Reminder</h3>
+            <form method="post" id="edit-reminder-form">
+                <input type="hidden" name="_token" id="edit-reminder-csrf">
+                <textarea id="edit-reminder-content" name="content"></textarea>
+                <div class="mt-3">
+                    <label class="block text-xs text-gray-500 mb-1">Remind at (your local time)</label>
+                    <input type="datetime-local" id="edit-reminder-at-local"
+                        class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="hidden" id="edit-reminder-at-utc" name="reminder_at">
+                </div>
+                <div class="flex gap-2 mt-3 items-center">
+                    <button type="submit"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                        Save
+                    </button>
+                    <button type="button" onclick="closeEditReminder()"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitDeleteReminder()"
+                        class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors">
+                        Delete
+                    </button>
+                </div>
+            </form>
+            <form method="post" id="delete-reminder-form" class="hidden">
+                <input type="hidden" name="_token" id="delete-reminder-csrf">
+            </form>
+        </div>
+    </div>
+
+    {# Edit note modal #}
+    <div id="edit-note-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl">
+            <h3 class="text-base font-semibold mb-3">Edit Note</h3>
+            <form method="post" id="edit-note-form">
+                <input type="hidden" name="_token" id="edit-note-csrf">
+                <textarea id="edit-note-content" name="content"></textarea>
+                <div class="flex gap-2 mt-3 items-center">
+                    <button type="submit"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                        Save
+                    </button>
+                    <button type="button" onclick="closeEditNote()"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitDeleteNote()"
+                        class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors">
+                        Delete
+                    </button>
+                </div>
+            </form>
+            <form method="post" id="delete-note-form" class="hidden">
+                <input type="hidden" name="_token" id="delete-note-csrf">
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+    import { renderAvatarHourly, renderAvatarHistory } from '/assets/charts/avatar.js';
+    import { localiseTimeTags } from '/assets/local-time.js';
+
+    const key = {{ avatar_key|json_encode|raw }};
+
+    fetch(`/api/avatar/${key}`)
+        .then(r => r.json())
+        .then(data => {
+            renderAvatarHourly('chart-avatar-hourly', data.hourly);
+            renderAvatarHistory('chart-avatar-history', data.history);
+        });
+
+    // ── Stale-while-revalidate profile refresh ────────────────────────────────
+    const card = document.getElementById('avatar-profile-card');
+    if (card && card.dataset.stale === '1') {
+        fetch(`/api/avatar/${key}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+
+                const newTs = data.synced_at;
+                const currentTs = parseInt(card.dataset.syncedAt || '0', 10);
+                if (newTs <= currentTs) return; // nothing changed on the server
+
+                // ── Update image with a crossfade ─────────────────────────────
+                const img = document.getElementById('avatar-profile-image');
+                if (img && data.image_url) {
+                    const tmp = new Image();
+                    tmp.onload = () => {
+                        img.style.opacity = '0';
+                        setTimeout(() => {
+                            img.src = tmp.src;
+                            img.style.opacity = '1';
+                        }, 400);
+                    };
+                    tmp.src = `/avatar/${key}/picture?v=${newTs}`;
+                }
+
+                // ── Update bio ────────────────────────────────────────────────
+                const bio = document.getElementById('avatar-profile-bio');
+                if (bio) {
+                    bio.innerHTML = data.bio_html || '';
+                    localiseTimeTags(bio);
+                }
+
+                // ── Update "Profile synced:" timestamp ────────────────────────
+                const timeEl = document.getElementById('avatar-profile-synced-time');
+                if (timeEl) {
+                    const d = new Date(data.synced_at * 1000);
+                    timeEl.setAttribute('datetime', d.toISOString());
+                    timeEl.textContent = d.toLocaleString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                    });
+                }
+
+                card.dataset.syncedAt = String(newTs);
+            })
+            .catch(() => {}); // silently ignore — stale data is fine
+    }
+</script>
+
+<script>
+// ── EasyMDE editors ───────────────────────────────────────────────────────────
+const mdeToolbar = ['bold', 'italic', '|', 'unordered-list', 'ordered-list', '|', 'preview'];
+
+let addNoteEditor = null;
+window.showNoteAdd = function() {
+    document.getElementById('note-add-btn').classList.add('hidden');
+    document.getElementById('note-add-wrapper').classList.remove('hidden');
+    if (!addNoteEditor) {
+        addNoteEditor = new EasyMDE({
+            element: document.getElementById('note-add-content'),
+            minHeight: '120px',
+            toolbar: mdeToolbar,
+            status: false,
+            spellChecker: false,
+        });
+    }
+    addNoteEditor.codemirror.focus();
+};
+window.hideNoteAdd = function() {
+    document.getElementById('note-add-btn').classList.remove('hidden');
+    document.getElementById('note-add-wrapper').classList.add('hidden');
+};
+
+let editNoteEditor = null;
+
+window.openEditNote = function(noteId, content, csrfToken, deleteCsrfToken) {
+    const modal = document.getElementById('edit-note-modal');
+    document.getElementById('edit-note-form').action =
+        '/avatar/{{ avatar_key }}/notes/' + noteId + '/edit';
+    document.getElementById('edit-note-csrf').value = csrfToken;
+    document.getElementById('delete-note-form').action =
+        '/avatar/{{ avatar_key }}/notes/' + noteId + '/delete';
+    document.getElementById('delete-note-csrf').value = deleteCsrfToken;
+
+    if (!editNoteEditor) {
+        editNoteEditor = new EasyMDE({
+            element: document.getElementById('edit-note-content'),
+            minHeight: '120px',
+            toolbar: mdeToolbar,
+            status: false,
+            spellChecker: false,
+        });
+    }
+    editNoteEditor.value(content);
+    modal.classList.remove('hidden');
+};
+
+window.closeEditNote = function() {
+    document.getElementById('edit-note-modal').classList.add('hidden');
+};
+window.submitDeleteNote = function() {
+    if (confirm('Delete this note?')) document.getElementById('delete-note-form').submit();
+};
+
+document.getElementById('edit-note-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditNote();
+});
+
+// ── Reminder editors ──────────────────────────────────────────────────────────
+let addReminderEditor = null;
+window.showReminderAdd = function() {
+    document.getElementById('reminder-add-btn').classList.add('hidden');
+    document.getElementById('reminder-add-wrapper').classList.remove('hidden');
+    if (!addReminderEditor) {
+        addReminderEditor = new EasyMDE({
+            element: document.getElementById('reminder-add-content'),
+            minHeight: '100px',
+            toolbar: mdeToolbar,
+            status: false,
+            spellChecker: false,
+        });
+    }
+    // Default to next 07:00 UTC, shown in user's local time
+    const localInput = document.getElementById('reminder-at-local');
+    if (!localInput.value) {
+        const now = new Date();
+        const candidate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 0, 0));
+        if (candidate <= now) candidate.setUTCDate(candidate.getUTCDate() + 1);
+        const pad = n => String(n).padStart(2, '0');
+        localInput.value = candidate.getFullYear() + '-' + pad(candidate.getMonth()+1) + '-' + pad(candidate.getDate())
+            + 'T' + pad(candidate.getHours()) + ':' + pad(candidate.getMinutes());
+        document.getElementById('reminder-at-utc').value = candidate.toISOString();
+    }
+    addReminderEditor.codemirror.focus();
+};
+window.hideReminderAdd = function() {
+    document.getElementById('reminder-add-btn').classList.remove('hidden');
+    document.getElementById('reminder-add-wrapper').classList.add('hidden');
+};
+
+let editReminderEditor = null;
+
+window.openEditReminder = function(reminderId, content, reminderAtUtcIso, csrfToken, deleteCsrfToken) {
+    const modal = document.getElementById('edit-reminder-modal');
+    document.getElementById('edit-reminder-form').action =
+        '/avatar/{{ avatar_key }}/reminders/' + reminderId + '/edit';
+    document.getElementById('edit-reminder-csrf').value = csrfToken;
+    document.getElementById('delete-reminder-form').action =
+        '/avatar/{{ avatar_key }}/reminders/' + reminderId + '/delete';
+    document.getElementById('delete-reminder-csrf').value = deleteCsrfToken;
+
+    const d = new Date(reminderAtUtcIso);
+    if (!isNaN(d)) {
+        const pad = n => String(n).padStart(2, '0');
+        const local = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        document.getElementById('edit-reminder-at-local').value = local;
+        document.getElementById('edit-reminder-at-utc').value = d.toISOString();
+    }
+
+    if (!editReminderEditor) {
+        editReminderEditor = new EasyMDE({
+            element: document.getElementById('edit-reminder-content'),
+            minHeight: '100px',
+            toolbar: mdeToolbar,
+            status: false,
+            spellChecker: false,
+        });
+    }
+    editReminderEditor.value(content);
+    modal.classList.remove('hidden');
+};
+
+window.closeEditReminder = function() {
+    document.getElementById('edit-reminder-modal').classList.add('hidden');
+};
+window.submitDeleteReminder = function() {
+    if (confirm('Delete this reminder?')) document.getElementById('delete-reminder-form').submit();
+};
+
+document.getElementById('edit-reminder-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditReminder();
+});
+
+// ── datetime-local → UTC hidden field ────────────────────────────────────────
+function syncUtcField(localInputId, utcInputId) {
+    const local = document.getElementById(localInputId);
+    const utc   = document.getElementById(utcInputId);
+    if (!local || !utc) return;
+    local.addEventListener('change', function() {
+        const d = new Date(this.value);
+        utc.value = isNaN(d) ? '' : d.toISOString();
+    });
+}
+syncUtcField('reminder-at-local', 'reminder-at-utc');
+syncUtcField('edit-reminder-at-local', 'edit-reminder-at-utc');
+
+// ── Countdown timers ──────────────────────────────────────────────────────────
+function formatDuration(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    const d = Math.floor(h / 24);
+    if (s < 60)  return s + 's';
+    if (m < 60)  return m + 'm ' + (s % 60) + 's';
+    if (h < 24)  return h + 'h ' + (m % 60) + 'm';
+    return d + 'd ' + (h % 24) + 'h';
+}
+
+function updateCountdowns() {
+    document.querySelectorAll('time[data-countdown]').forEach(el => {
+        const iso  = el.getAttribute('datetime');
+        if (!iso) return;
+        const diff = new Date(iso) - new Date();
+        if (diff <= 0) {
+            el.textContent = 'Overdue by ' + formatDuration(-diff);
+            el.classList.add('text-red-500');
+        } else {
+            el.textContent = 'In ' + formatDuration(diff);
+            el.classList.remove('text-red-500');
+        }
+    });
+}
+
+updateCountdowns();
+setInterval(updateCountdowns, 1000);
+</script>
+{% endblock %}
