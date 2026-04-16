@@ -1,0 +1,1322 @@
+{
+  "info": {
+    "name": "SL Tracker API",
+    "description": "API collection for Second Life Tracker - Avatar tracking and notifications system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "your-api-secret-key",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "in": "header"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login Page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            },
+            "description": "Get the login page"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Analytics",
+      "item": [
+        {
+          "name": "Live Visitors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/live-visitors",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "live-visitors"]
+            },
+            "description": "Get currently online visitors"
+          }
+        },
+        {
+          "name": "Recent Visitors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/recent-visitors?period=today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recent-visitors"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "today",
+                  "description": "today, yesterday, week, month, year, all"
+                }
+              ]
+            },
+            "description": "Get visitors for a time period"
+          }
+        },
+        {
+          "name": "Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leaderboard?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leaderboard"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Max number of results"
+                }
+              ]
+            },
+            "description": "Get top visitors by visit count"
+          }
+        },
+        {
+          "name": "Heatmap",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/heatmap",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "heatmap"]
+            },
+            "description": "Get activity heatmap by day/hour"
+          }
+        },
+        {
+          "name": "Hourly Activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/hourly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "hourly"]
+            },
+            "description": "Get hourly activity histogram"
+          }
+        },
+        {
+          "name": "Daily Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "daily"]
+            },
+            "description": "Get daily statistics"
+          }
+        },
+        {
+          "name": "Weekday Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/weekday",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekday"]
+            },
+            "description": "Get day-of-week statistics"
+          }
+        },
+        {
+          "name": "Concurrent Presence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/concurrent?days=90",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "concurrent"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "90",
+                  "description": "Lookback period in days"
+                }
+              ]
+            },
+            "description": "Get concurrent presence data"
+          }
+        },
+        {
+          "name": "Duration Distribution",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/duration-distribution",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "duration-distribution"]
+            },
+            "description": "Get visit duration distribution"
+          }
+        },
+        {
+          "name": "Frequency vs Duration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/frequency-vs-duration",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "frequency-vs-duration"]
+            },
+            "description": "Get visit frequency vs duration correlation"
+          }
+        },
+        {
+          "name": "New vs Returning",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/new-vs-returning",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "new-vs-returning"]
+            },
+            "description": "Get new vs returning visitors breakdown"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Avatar Profiles",
+      "item": [
+        {
+          "name": "Get Avatar Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/avatar/12345678-1234-1234-1234-123456789012/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatar", "12345678-1234-1234-1234-123456789012", "profile"]
+            },
+            "description": "Fetch fresh profile from Second Life"
+          }
+        },
+        {
+          "name": "Get Avatar Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/avatar/12345678-1234-1234-1234-123456789012",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatar", "12345678-1234-1234-1234-123456789012"]
+            },
+            "description": "Get avatar stats, hourly histogram, visit history"
+          }
+        },
+        {
+          "name": "Active Reminders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reminders/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reminders", "active"]
+            },
+            "description": "List all active reminders with overdue status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracked Avatars (Protected)",
+      "item": [
+        {
+          "name": "List All Avatars",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is array', function() {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars"]
+            },
+            "description": "List all tracked avatars with notification settings"
+          }
+        },
+        {
+          "name": "Create Avatar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Avatar key matches', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.avatarKey).to.eql('87654321-4321-4321-4321-210987654321');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"avatarKey\": \"87654321-4321-4321-4321-210987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars"]
+            },
+            "description": "Add a new tracked avatar"
+          }
+        },
+        {
+          "name": "Create Avatar - Invalid UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"avatarKey\": \"not-a-valid-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars"]
+            },
+            "description": "Try to create avatar with invalid UUID"
+          }
+        },
+        {
+          "name": "Create Avatar - Missing Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars"]
+            },
+            "description": "Try to create avatar without providing key"
+          }
+        },
+        {
+          "name": "Update Avatar - Enable Tracking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"trackingEnabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars/87654321-4321-4321-4321-210987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars", "87654321-4321-4321-4321-210987654321"]
+            },
+            "description": "Enable tracking for an avatar"
+          }
+        },
+        {
+          "name": "Update Avatar - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"trackingEnabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Update non-existent avatar"
+          }
+        },
+        {
+          "name": "Delete Avatar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 204', function() {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars/87654321-4321-4321-4321-210987654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars", "87654321-4321-4321-4321-210987654321"]
+            },
+            "description": "Remove a tracked avatar"
+          }
+        },
+        {
+          "name": "Delete Avatar - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/avatars/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "avatars", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Delete non-existent avatar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Channels (Protected)",
+      "item": [
+        {
+          "name": "List All Channels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is array', function() {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "List all notification channels"
+          }
+        },
+        {
+          "name": "Create Channel - Telegram",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Channel type is telegram', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.type).to.eql('telegram');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Telegram Alerts\",\n    \"type\": \"telegram\",\n    \"config\": {\n        \"bot_token\": \"123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11\",\n        \"chat_id\": \"-1001234567890\"\n    },\n    \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "Create a Telegram notification channel"
+          }
+        },
+        {
+          "name": "Create Channel - Discord",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Discord Alerts\",\n    \"type\": \"discord\",\n    \"config\": {\n        \"webhook_url\": \"https://discord.com/api/webhooks/123456789/abcdefghijk\"\n    },\n    \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "Create a Discord notification channel"
+          }
+        },
+        {
+          "name": "Create Channel - Missing Fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Incomplete Channel\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "Try to create channel without required fields"
+          }
+        },
+        {
+          "name": "Create Channel - Invalid Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Invalid Type Channel\",\n    \"type\": \"invalid_type\",\n    \"config\": {}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels"]
+            },
+            "description": "Try to create channel with invalid type"
+          }
+        },
+        {
+          "name": "Update Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Channel Name\",\n    \"enabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "1"]
+            },
+            "description": "Update a notification channel"
+          }
+        },
+        {
+          "name": "Update Channel - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "99999"]
+            },
+            "description": "Update non-existent channel"
+          }
+        },
+        {
+          "name": "Delete Channel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 204', function() {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "1"]
+            },
+            "description": "Delete a notification channel"
+          }
+        },
+        {
+          "name": "Delete Channel - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "99999"]
+            },
+            "description": "Delete non-existent channel"
+          }
+        },
+        {
+          "name": "Test Channel - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notification-channels/99999/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notification-channels", "99999", "test"]
+            },
+            "description": "Test non-existent channel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events Ingestion (LSL Scripts)",
+      "item": [
+        {
+          "name": "Post Login Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Received 1 event', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.received).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\",\n        \"displayName\": \"Test Avatar\",\n        \"username\": \"test.avatar\",\n        \"regionName\": \"Second Life\",\n        \"position\": {\"x\": 100, \"y\": 200, \"z\": 50}\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post a login event from LSL script"
+          }
+        },
+        {
+          "name": "Post Logout Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T11:00:00Z\",\n        \"action\": \"logout\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\",\n        \"displayName\": \"Test Avatar\",\n        \"username\": \"test.avatar\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post a logout event from LSL script"
+          }
+        },
+        {
+          "name": "Post Multiple Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Received 2 events', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.received).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"11111111-1111-1111-1111-111111111111\",\n        \"displayName\": \"Avatar One\",\n        \"username\": \"avatar.one\"\n    },\n    {\n        \"event_ts\": \"2024-01-15T10:35:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"22222222-2222-2222-2222-222222222222\",\n        \"displayName\": \"Avatar Two\",\n        \"username\": \"avatar.two\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post multiple events at once"
+          }
+        },
+        {
+          "name": "Post Event - Invalid Action",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"invalid_action\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\",\n        \"displayName\": \"Test Avatar\",\n        \"username\": \"test.avatar\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post event with invalid action"
+          }
+        },
+        {
+          "name": "Post Event - Missing Required Field",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post event with missing required field"
+          }
+        },
+        {
+          "name": "Post Event - No API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\",\n        \"displayName\": \"Test Avatar\",\n        \"username\": \"test.avatar\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post event without API key"
+          }
+        },
+        {
+          "name": "Post Event - Invalid API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "wrong-api-key",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"event_ts\": \"2024-01-15T10:30:00Z\",\n        \"action\": \"login\",\n        \"avatarKey\": \"12345678-1234-1234-1234-123456789012\",\n        \"displayName\": \"Test Avatar\",\n        \"username\": \"test.avatar\"\n    }\n]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Post event with invalid API key"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tracking Config (LSL Scripts)",
+      "item": [
+        {
+          "name": "Get Tracking Config",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has trackedAvatars array', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('trackedAvatars');",
+                  "    pm.expect(jsonData).to.have.property('version');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracking-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracking-config"]
+            },
+            "description": "Get list of avatars to track (for LSL scripts)"
+          }
+        },
+        {
+          "name": "Get Tracking Config - No API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracking-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracking-config"]
+            },
+            "description": "Get tracking config without API key"
+          }
+        },
+        {
+          "name": "Get Tracking Config - Invalid API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "wrong-api-key",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tracking-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tracking-config"]
+            },
+            "description": "Get tracking config with invalid API key"
+          }
+        }
+      ]
+    }
+  ]
+}
