@@ -15,16 +15,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('docker/php/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          php-version: '8.4'
+          extensions: pdo_mysql, pdo_sqlite, zip, xml, dom, curl, mbstring
+          coverage: none
 
       - name: Create .env file for testing
         run: |
@@ -37,24 +33,6 @@ jobs:
       - name: Create var directory
         run: mkdir -p var
 
-      - name: Build Docker image
-        run: docker compose build php
-
-      - name: Start services
-        run: docker compose up -d
-
-      - name: Wait for PHP to be ready
-        run: |
-          echo "Waiting for PHP to be ready..."
-          for i in {1..30}; do
-            if docker compose exec -T php php -v > /dev/null 2>&1; then
-              echo "PHP is ready"
-              break
-            fi
-            echo "Waiting... ($i/30)"
-            sleep 2
-          done
-
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
@@ -64,11 +42,24 @@ jobs:
             ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
-        run: docker compose exec -T php composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Start MySQL
+        run: |
+          docker compose up -d mysql
+          echo "Waiting for MySQL to be ready..."
+          for i in {1..30}; do
+            if docker compose exec -T mysql mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; then
+              echo "MySQL is ready"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
 
       - name: Run PHPUnit tests
-        run: docker compose exec -T php ./vendor/bin/phpunit --configuration phpunit.xml.dist
+        run: ./vendor/bin/phpunit --configuration phpunit.xml.dist
 
-      - name: Stop services
+      - name: Stop MySQL
         if: always()
         run: docker compose down
