@@ -1,0 +1,58 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: PHPUnit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env file for testing
+        run: |
+          cat > .env.local << 'EOF'
+          APP_ENV=test
+          APP_SECRET=test-secret-key-for-ci
+          API_SECRET_KEY=test-api-key-12345
+          EOF
+
+      - name: Create var directory
+        run: mkdir -p var
+
+      - name: Build Docker image
+        run: docker compose build php
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Wait for PHP to be ready
+        run: |
+          echo "Waiting for PHP to be ready..."
+          for i in {1..30}; do
+            if docker compose exec -T php php -v > /dev/null 2>&1; then
+              echo "PHP is ready"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Install Composer dependencies
+        run: docker compose exec -T php composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Run PHPUnit tests
+        run: docker compose exec -T php ./vendor/bin/phpunit --configuration phpunit.xml.dist
+
+      - name: Stop services
+        if: always()
+        run: docker compose down
