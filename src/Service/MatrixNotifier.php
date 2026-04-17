@@ -10,7 +10,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[WithMonologChannel('notification')]
-class TelegramNotifier implements NotificationChannelInterface
+class MatrixNotifier implements NotificationChannelInterface
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -26,10 +26,11 @@ class TelegramNotifier implements NotificationChannelInterface
         }
 
         $config = $channel->getConfig();
+        $serverUrl = $config['server_url'] ?? null;
+        $roomId = $config['room_id'] ?? null;
         $botToken = $config['bot_token'] ?? null;
-        $chatId = $config['chat_id'] ?? null;
 
-        if (!$botToken || !$chatId) {
+        if (!$serverUrl || !$roomId || !$botToken) {
             return;
         }
 
@@ -55,7 +56,7 @@ class TelegramNotifier implements NotificationChannelInterface
             $username ?: 'unknown'
         );
 
-        $this->sendMessage($avatarKey, 'login', $botToken, $chatId, $message, $event);
+        $this->sendMessage($avatarKey, 'login', $serverUrl, $roomId, $botToken, $message, $event);
     }
 
     public function sendLogout(TrackedAvatar $avatar, array $event): void
@@ -66,10 +67,11 @@ class TelegramNotifier implements NotificationChannelInterface
         }
 
         $config = $channel->getConfig();
+        $serverUrl = $config['server_url'] ?? null;
+        $roomId = $config['room_id'] ?? null;
         $botToken = $config['bot_token'] ?? null;
-        $chatId = $config['chat_id'] ?? null;
 
-        if (!$botToken || !$chatId) {
+        if (!$serverUrl || !$roomId || !$botToken) {
             return;
         }
 
@@ -95,28 +97,30 @@ class TelegramNotifier implements NotificationChannelInterface
             $username ?: 'unknown'
         );
 
-        $this->sendMessage($avatarKey, 'logout', $botToken, $chatId, $message, $event);
+        $this->sendMessage($avatarKey, 'logout', $serverUrl, $roomId, $botToken, $message, $event);
     }
 
     public function test(NotificationChannel $channel): bool
     {
         $config = $channel->getConfig();
+        $serverUrl = $config['server_url'] ?? null;
+        $roomId = $config['room_id'] ?? null;
         $botToken = $config['bot_token'] ?? null;
-        $chatId = $config['chat_id'] ?? null;
 
-        if (!$botToken || !$chatId) {
+        if (!$serverUrl || !$roomId || !$botToken) {
             return false;
         }
 
         $message = "✅ Test notification from Avatar Tracking System";
-        return $this->sendMessage($channel->getName(), 'test', $botToken, $chatId, $message, []);
+        return $this->sendMessage($channel->getName(), 'test', $serverUrl, $roomId, $botToken, $message, []);
     }
 
-    private function sendMessage(string $avatarKey, string $action, string $botToken, string $chatId, string $message, array $event): bool
+    private function sendMessage(string $avatarKey, string $action, string $serverUrl, string $roomId, string $botToken, string $message, array $event): bool
     {
         $context = [
-            'channel_type' => 'telegram',
-            'channel_id' => $chatId,
+            'channel_type' => 'matrix',
+            'server_url' => $serverUrl,
+            'room_id' => $roomId,
             'avatar_key' => $avatarKey,
             'action' => $action,
             'event' => $event,
@@ -124,34 +128,40 @@ class TelegramNotifier implements NotificationChannelInterface
         ];
 
         try {
-            $response = $this->httpClient->request('POST', "https://api.telegram.org/bot{$botToken}/sendMessage", [
+            $txnId = md5($roomId . time() . random_bytes(4));
+            $url = rtrim($serverUrl, '/') . "/_matrix/client/v3/rooms/{$roomId}/send/m.room.message/{$txnId}";
+
+            $response = $this->httpClient->request('PUT', $url, [
+                'headers' => [
+                    'Authorization' => "Bearer {$botToken}",
+                    'Content-Type' => 'application/json',
+                ],
                 'json' => [
-                    'chat_id' => $chatId,
-                    'text' => $message,
-                    'parse_mode' => 'HTML'
+                    'msgtype' => 'm.text',
+                    'body' => $message,
                 ],
                 'timeout' => 5,
             ]);
 
             $statusCode = $response->getStatusCode();
-            $responseData = $response->toArray(false);
 
             if ($statusCode === 200) {
-                $this->logger->info('Telegram notification sent successfully', array_merge($context, [
+                $this->logger->info('Matrix notification sent successfully', array_merge($context, [
                     'status' => 'success',
-                    'telegram_message_id' => $responseData['result']['message_id'] ?? null,
+                    'txn_id' => $txnId,
                 ]));
                 return true;
             }
 
-            $this->logger->error('Telegram notification failed', array_merge($context, [
+            $responseData = $response->toArray(false);
+            $this->logger->error('Matrix notification failed', array_merge($context, [
                 'status' => 'failed',
                 'status_code' => $statusCode,
                 'response' => $responseData,
             ]));
             return false;
         } catch (\Throwable $e) {
-            $this->logger->error('Telegram notification exception', array_merge($context, [
+            $this->logger->error('Matrix notification exception', array_merge($context, [
                 'status' => 'failed',
                 'exception' => $e->getMessage(),
             ]));

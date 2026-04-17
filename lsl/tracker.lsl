@@ -202,18 +202,17 @@ processAvatarStatus(integer idx, integer isOnline) {
     }
 }
 
-sendEvent(string uuid, string action, string displayName, string username, integer timestamp) {
+sendEvent(string uuid, string action, string displayName, integer timestamp) {
     // Format timestamp as ISO 8601
     string isoTime = llGetTimestamp();
-    
+
     // Build JSON event
     string json = "[{\"event_ts\":\"" + isoTime + "\",";
     json += "\"action\":\"" + action + "\",";
     json += "\"avatarKey\":\"" + uuid + "\",";
     json += "\"displayName\":\"" + displayName + "\",";
-    json += "\"username\":\"" + username + "\",";
     json += "\"regionName\":\"global\"}]";
-    
+
     string url = API_URL + "/api/events";
     httpPost(url, json);
 }
@@ -311,31 +310,24 @@ default {
             pending_queries = llListReplaceList(pending_queries, [NULL_KEY], idx, idx);
             return;
         }
-        
+
         // Check if this is a name query for pending events
         integer eventIdx = llListFindList(pending_events, [query_id]);
         if (eventIdx != -1 && (eventIdx % 4) == 0) {
             string uuid = llList2String(pending_events, eventIdx + 1);
             string action = llList2String(pending_events, eventIdx + 2);
             integer timestamp = llList2Integer(pending_events, eventIdx + 3);
-            
-            // Parse name: "DisplayName Resident" or just "DisplayName"
+
+            // Parse display name: "DisplayName Resident" or just "DisplayName"
             list nameParts = llParseString2List(data, [" "], []);
             string displayName = llList2String(nameParts, 0);
-            string username = llList2String(nameParts, 1);
-            
-            if (username == "Resident") {
-                username = llToLower(llGetSubString(displayName, 0, 0)) + 
-                           llGetSubString(displayName, 1, -1);
-            } else {
-                username = llToLower(username);
-            }
-            
-            sendEvent(uuid, action, displayName, username, timestamp);
-            
+            // Username is now fetched from SL website by the backend
+
+            sendEvent(uuid, action, displayName, timestamp);
+
             // Remove from pending events
             pending_events = llDeleteSubList(pending_events, eventIdx, eventIdx + 3);
-            
+
             return;
         }
     }

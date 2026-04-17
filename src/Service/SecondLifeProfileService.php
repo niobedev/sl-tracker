@@ -68,6 +68,7 @@ class SecondLifeProfileService
         $profile = $stored ?? new AvatarProfile();
         $profile->setAvatarKey($avatarKey);
         $profile->setName($parsed['name']);
+        $profile->setUsername($parsed['username'] ?? null);
         $profile->setImageUrl($parsed['imageUrl']);
         $profile->setBioHtml($parsed['bioHtml']);
         $profile->setSyncedAt(new \DateTimeImmutable());
@@ -87,6 +88,7 @@ class SecondLifeProfileService
     {
         return [
             'name'     => $profile->getName(),
+            'username' => $profile->getUsername(),
             'bioHtml'  => $profile->getBioHtml(),
             'imageUrl' => $profile->getImageUrl(),
             'syncedAt' => $profile->getSyncedAt(),
@@ -138,9 +140,23 @@ class SecondLifeProfileService
         $imageId = $meta['imageid'] ?? null;
         $rawBio  = trim($meta['description'] ?? '');
 
-        // Title format: "Display Name (username)"
+        // Title format: "Display Name (username)" or just "Display Name"
         $titleNode = $xpath->query('//title')->item(0);
-        $name = $titleNode ? trim(preg_replace('/\s*\([^)]+\)\s*$/', '', $titleNode->textContent)) : '';
+        $titleText = $titleNode ? trim($titleNode->textContent) : '';
+
+        $name = '';
+        $username = '';
+
+        if ($titleText) {
+            // Try to match "Display Name (username)" pattern
+            if (preg_match('/^(.+?)\s*\(([^)]+)\)\s*$/', $titleText, $matches)) {
+                $name = trim($matches[1]);
+                $username = trim($matches[2]);
+            } else {
+                // No username in parentheses, use the whole title as name
+                $name = $titleText;
+            }
+        }
 
         if (!$imageId && !$rawBio && !$name) {
             return null;
@@ -151,6 +167,7 @@ class SecondLifeProfileService
 
         return [
             'name'     => $name ?: null,
+            'username' => $username ?: null,
             'bioHtml'  => $bioHtml,
             'imageUrl' => $imageUrl,
         ];

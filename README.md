@@ -6,10 +6,11 @@ A Symfony 8 application for tracking Second Life avatar login/logout events with
 
 - 🎯 Global avatar tracking via LSL script using `llRequestAgentData()`
 - 📊 Real-time analytics dashboard with interactive charts
-- 🔔 Multi-channel notifications (Telegram, with extensible architecture for Discord, Matrix, etc.)
+- 🔔 Multi-channel notifications (Telegram, Matrix)
 - 👥 Avatar management with Second Life profile integration
 - ⚙️ Configurable notification channels per avatar
 - 📈 Comprehensive analytics: online time, activity patterns, leaderboards
+- 🤖 Automatic avatar username fetching from Second Life website
 
 ## Architecture
 
@@ -39,10 +40,8 @@ Telegram (send notifications)
 
 - `event` - Login/logout events with timestamps
 - `tracked_avatar` - Avatars being monitored
-- `notification_channel` - Notification destinations (Telegram, etc.)
-- `avatar_profile` - Cached Second Life profile data
-- `avatar_note` - User notes about avatars
-- `avatar_reminder` - Dated reminders for avatars
+- `notification_channel` - Notification destinations (Telegram, Matrix)
+- `avatar_profile` - Cached Second Life profile data (name, username, avatar image, bio)
 - `user` - Application users
 
 ## Quick Start
@@ -104,12 +103,22 @@ APP_SECRET=generate-with:php -r "echo bin2hex(random_bytes(32));"
 
 ### 1. Set Up Notification Channels
 
-Navigate to **Channels** page and create a Telegram channel:
+Navigate to **Channels** page and create a notification channel:
+
+**Telegram:**
 - Name: e.g., "Main Notifications"
 - Type: "telegram"
 - Config:
   - Bot Token: Get from [@BotFather](https://t.me/BotFather)
   - Chat ID: Your Telegram chat ID
+
+**Matrix:**
+- Name: e.g., "Matrix Notifications"
+- Type: "matrix"
+- Config:
+  - Server URL: Your Matrix server (e.g., `https://matrix.example.com`)
+  - Room ID: The Matrix room ID (e.g., `!abc123:example.com`)
+  - Bot Token: Your Matrix bot access token
 
 Click **Test** to verify the configuration.
 
@@ -174,13 +183,14 @@ X-API-Key: your-api-key
     "action": "login",
     "avatarKey": "12345678-1234-1234-1234-123456789012",
     "displayName": "John Doe",
-    "username": "johndoe",
     "regionName": "global"
   }
 ]
 ```
 
 **Response**: `201 Created` with `{"received": 1}`
+
+**Note**: The `username` field is now automatically fetched from the Second Life website and stored in the avatar profile. The LSL script only needs to send `displayName`.
 
 #### Get Tracking Config
 
@@ -332,9 +342,16 @@ make prod-push
 
 ### Notifications Not Working
 
+**Telegram:**
 1. Test the channel via UI (Channels → Test button)
 2. Verify bot token and chat ID are correct
 3. Check Telegram bot has permission to send messages
+4. Check server logs for errors
+
+**Matrix:**
+1. Test the channel via UI (Channels → Test button)
+2. Verify server URL, room ID, and bot token are correct
+3. Ensure the bot is a member of the target room
 4. Check server logs for errors
 
 ### Database Issues

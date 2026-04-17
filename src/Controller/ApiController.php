@@ -3,20 +3,19 @@
 namespace App\Controller;
 
 use App\Entity\Event;
-use App\Repository\AvatarReminderRepository;
 use App\Repository\EventRepository;
 use App\Repository\TrackedAvatarRepository;
 use App\Service\ApiAuthService;
 use App\Service\NotificationService;
 use App\Service\TrackingConfigService;
 use App\Service\SecondLifeProfileService;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/api', name: 'api_')]
@@ -25,12 +24,12 @@ class ApiController extends AbstractController
     public function __construct(
         private readonly EventRepository $eventRepository,
         private readonly TrackedAvatarRepository $trackedAvatarRepository,
-        private readonly AvatarReminderRepository $reminderRepository,
         private readonly SecondLifeProfileService $profileService,
         private readonly ApiAuthService $apiAuthService,
         private readonly NotificationService $notificationService,
         private readonly TrackingConfigService $trackingConfigService,
         private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[Route('/live-visitors', name: 'live_visitors', methods: ['GET'])]
@@ -148,22 +147,6 @@ class ApiController extends AbstractController
         ]);
     }
 
-    #[Route('/reminders/active', name: 'reminders_active', methods: ['GET'])]
-    public function remindersActive(): JsonResponse
-    {
-        $reminders = $this->reminderRepository->findAllActive();
-        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-
-        return $this->json(array_map(fn($r) => [
-            'id'          => $r->getId(),
-            'avatar_key'  => $r->getAvatarKey(),
-            'content'     => $r->getContent(),
-            'reminder_at' => $r->getReminderAt()->getTimestamp(),
-            'is_overdue'  => $r->getReminderAt() < $now,
-            'author'      => $r->getAuthor()->getUsername(),
-        ], $reminders));
-    }
-
     #[Route('/events', name: 'events', methods: ['POST'])]
     public function receiveEvents(Request $request): JsonResponse
     {
@@ -212,7 +195,7 @@ class ApiController extends AbstractController
 
     private function processEvent(array $event): bool
     {
-        $requiredFields = ['event_ts', 'action', 'avatarKey', 'displayName', 'username'];
+        $requiredFields = ['event_ts', 'action', 'avatarKey', 'displayName'];
         foreach ($requiredFields as $field) {
             if (!isset($event[$field])) {
                 return false;
@@ -224,7 +207,7 @@ class ApiController extends AbstractController
             return false;
         }
 
-        $avatarKey = strtolower($event['avatarKey']);
+        $avatarKey = strtolower(trim($event['avatarKey']));
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $avatarKey)) {
             return false;
         }
@@ -238,15 +221,24 @@ class ApiController extends AbstractController
         $entity = new Event();
         $entity->setAction($action);
         $entity->setAvatarKey($avatarKey);
-        $entity->setDisplayName($event['displayName']);
-        $entity->setUsername($event['username']);
+        $entity->setDisplayName(trim($event['displayName']));
+        $entity->setUsername(isset($event['username']) ? trim($event['username']) : null);
         $entity->setEventTs($eventTs);
         $entity->setRegionName($event['regionName'] ?? 'global');
         $entity->setPosition(isset($event['position']) ? json_encode($event['position']) : null);
 
         $this->em->persist($entity);
 
-        $tracked = $this->trackedAvatarRepository->find($avatarKey);
+        $tracked = $this->trackedAvatarRepository->findOneByAvatarKey($avatarKey);
+        
+        $this->logger->info('Processing event', [
+            'avatar_key' => $avatarKey,
+            'action' => $action,
+            'tracked_found' => $tracked !== null,
+            'tracking_enabled' => $tracked?->isTrackingEnabled(),
+            'notification_channel' => $tracked?->getNotificationChannel()?->getId(),
+        ]);
+        
         if ($tracked && $tracked->isTrackingEnabled() && $tracked->getNotificationChannel()) {
             try {
                 $notifier = $this->notificationService->getNotifier(
@@ -259,6 +251,10 @@ class ApiController extends AbstractController
                     $notifier->sendLogout($tracked, $event);
                 }
             } catch (\Throwable $e) {
+                $this->logger->error('Notification failed', [
+                    'avatar_key' => $avatarKey,
+                    'exception' => $e->getMessage(),
+                ]);
                 error_log("Notification failed: " . $e->getMessage());
             }
         }
