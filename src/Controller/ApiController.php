@@ -222,7 +222,7 @@ class ApiController extends AbstractController
         $entity->setAction($action);
         $entity->setAvatarKey($avatarKey);
         $entity->setDisplayName(trim($event['displayName']));
-        $entity->setUsername(isset($event['username']) ? trim($event['username']) : null);
+        $entity->setUsername(isset($event['username']) && $event['username'] !== '' ? trim($event['username']) : '');
         $entity->setEventTs($eventTs);
         $entity->setRegionName($event['regionName'] ?? 'global');
         $entity->setPosition(isset($event['position']) ? json_encode($event['position']) : null);

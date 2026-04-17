@@ -26,7 +26,7 @@ key httpGet(string url) {
         url,
         [
             HTTP_METHOD, "GET",
-            HTTP_HEADERS, ["X-API-Key: " + API_KEY]
+            HTTP_CUSTOM_HEADER, "X-API-Key", API_KEY
         ],
         ""
     );
@@ -39,7 +39,7 @@ key httpPost(string url, string body) {
         [
             HTTP_METHOD, "POST",
             HTTP_MIMETYPE, "application/json",
-            HTTP_HEADERS, ["X-API-Key: " + API_KEY]
+            HTTP_CUSTOM_HEADER, "X-API-Key", API_KEY
         ],
         body
     );
@@ -81,12 +81,12 @@ processConfig(string body) {
     while (i < len) {
         // Find next quote
         integer quote1 = llSubStringIndex(llGetSubString(arrayStr, i, -1), "\"");
-        if (quote1 == -1) break;
+        if (quote1 == -1) return;
         
         // Find closing quote
         integer subStart = i + quote1 + 1;
         integer quote2 = llSubStringIndex(llGetSubString(arrayStr, subStart, -1), "\"");
-        if (quote2 == -1) break;
+        if (quote2 == -1) return;
         
         string uuid = llGetSubString(arrayStr, subStart, subStart + quote2 - 1);
         uuid = llToLower(llStringTrim(uuid, STRING_TRIM));
@@ -105,7 +105,12 @@ processConfig(string body) {
         integer comma = llSubStringIndex(llGetSubString(body, start, -1), ",");
         integer closeBrace = llSubStringIndex(llGetSubString(body, start, -1), "}");
         
-        integer endVer = (comma != -1 && comma < closeBrace) ? comma : closeBrace;
+        integer endVer;
+        if (comma != -1 && comma < closeBrace) {
+            endVer = comma;
+        } else {
+            endVer = closeBrace;
+        }
         string verStr = llGetSubString(body, start, start + endVer - 1);
         verStr = llStringTrim(verStr, STRING_TRIM);
         integer newVersion = (integer)verStr;
@@ -129,10 +134,10 @@ updateAvatarList(list newAvatars) {
         string uuid = llList2String(tracked_avatars, i);
         if (llListFindList(newAvatars, [uuid]) == -1) {
             if (DEBUG) llOwnerSay("DEBUG: Removing avatar: " + uuid);
-            tracked_avatars = llDeleteSubList(tracked_avatars, i);
-            avatar_online = llDeleteSubList(avatar_online, i);
-            avatar_names = llDeleteSubList(avatar_names, i);
-            pending_queries = llDeleteSubList(pending_queries, i);
+            tracked_avatars = llDeleteSubList(tracked_avatars, i, i);
+            avatar_online = llDeleteSubList(avatar_online, i, i);
+            avatar_names = llDeleteSubList(avatar_names, i, i);
+            pending_queries = llDeleteSubList(pending_queries, i, i);
         }
     }
     
@@ -184,15 +189,20 @@ processAvatarStatus(integer idx, integer isOnline) {
     if (wasOnline != isOnline) {
         // Status changed!
         string uuid = llList2String(tracked_avatars, idx);
-        string action = isOnline ? "login" : "logout";
+        string action;
+        if (isOnline) {
+            action = "login";
+        } else {
+            action = "logout";
+        }
         
         if (DEBUG) llOwnerSay("DEBUG: " + action + " detected for " + uuid);
         
         // Fetch name for the event
         key nameKey = llRequestAgentData((key)uuid, DATA_NAME);
         // Store the action to send after we get the name
-        // We'll use a list: [query_id, uuid, action, timestamp]
-        pending_events += [nameKey, uuid, action, llGetUnixTime()];
+        // We'll use a list: [query_id, uuid, action]
+        pending_events += [nameKey, uuid, action];
         
         // Update status
         avatar_online = llListReplaceList(avatar_online, [isOnline], idx, idx);
@@ -202,7 +212,7 @@ processAvatarStatus(integer idx, integer isOnline) {
     }
 }
 
-sendEvent(string uuid, string action, string displayName, integer timestamp) {
+sendEvent(string uuid, string action, string displayName) {
     // Format timestamp as ISO 8601
     string isoTime = llGetTimestamp();
 
@@ -313,20 +323,19 @@ default {
 
         // Check if this is a name query for pending events
         integer eventIdx = llListFindList(pending_events, [query_id]);
-        if (eventIdx != -1 && (eventIdx % 4) == 0) {
+        if (eventIdx != -1 && (eventIdx % 3) == 0) {
             string uuid = llList2String(pending_events, eventIdx + 1);
             string action = llList2String(pending_events, eventIdx + 2);
-            integer timestamp = llList2Integer(pending_events, eventIdx + 3);
 
             // Parse display name: "DisplayName Resident" or just "DisplayName"
             list nameParts = llParseString2List(data, [" "], []);
             string displayName = llList2String(nameParts, 0);
             // Username is now fetched from SL website by the backend
 
-            sendEvent(uuid, action, displayName, timestamp);
+            sendEvent(uuid, action, displayName);
 
             // Remove from pending events
-            pending_events = llDeleteSubList(pending_events, eventIdx, eventIdx + 3);
+            pending_events = llDeleteSubList(pending_events, eventIdx, eventIdx + 2);
 
             return;
         }

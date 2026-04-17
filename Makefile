@@ -106,3 +106,39 @@ prod-build: ## Build the production Docker image locally
 
 prod-push: ## Push the production image to GHCR (requires docker login ghcr.io)
 	docker push ghcr.io/niobedev/toral-house-dashboard:latest
+
+# ─────────────────────────────────────────────────────────
+# LSL Scripts
+# ─────────────────────────────────────────────────────────
+
+.PHONY: lint-lsl
+
+LSL_FILES = $(wildcard lsl/*.lsl)
+
+lslint: ## Download lslint to /tmp/lslint in container
+	@mkdir -p /tmp
+	$(DC) exec php sh -c "\
+		if [ -f /tmp/lslint ]; then \
+			echo 'lslint already exists'; \
+		else \
+			curl -sL -o /tmp/lslint.zip 'https://github.com/Makopo/lslint/releases/download/nightly_build_20230410045235/lslint_nightly_build_20230410045235_linux64.zip' && \
+			unzip -o /tmp/lslint.zip -d /tmp/lslint_tmp && \
+			mv /tmp/lslint_tmp/lslint /tmp/lslint && \
+			chmod +x /tmp/lslint && \
+			rm -rf /tmp/lslint.zip /tmp/lslint_tmp; \
+		fi \
+	"
+
+lint-lsl: lslint ## Validate LSL scripts syntax: make lint-lsl
+	@echo "Checking LSL syntax..."
+	@failed=0; \
+	for f in $(LSL_FILES); do \
+		echo "Checking $$f..."; \
+		$(DC) exec php /tmp/lslint "$$f" || failed=1; \
+	done; \
+	if [ $$failed -eq 0 ]; then \
+		echo "All LSL scripts are valid!"; \
+	else \
+		echo "Some LSL scripts have errors."; \
+	fi; \
+	exit $$failed
