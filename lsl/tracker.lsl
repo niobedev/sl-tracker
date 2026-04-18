@@ -143,13 +143,9 @@ processConfig(string body) {
     string verStr = llStringTrim(llGetSubString(body, start, start + endVer - 1), STRING_TRIM);
     integer newVersion = (integer)verStr;
 
-    if (newVersion != config_version) {
-        debugLog("Config version " + (string)config_version + " -> " + (string)newVersion);
-        updateAvatarList(newAvatars);
-        config_version = newVersion;
-    } else {
-        debugLog("Config version unchanged: " + (string)config_version);
-    }
+    debugLog("Config version: " + (string)newVersion + ", avatars received: " + (string)(llGetListLength(newAvatars) / STRIDE));
+    updateAvatarList(newAvatars);
+    config_version = newVersion;
 }
 
 integer findAvatarIndex(string uuid) {
@@ -180,7 +176,7 @@ updateAvatarList(list newAvatars) {
         }
     }
 
-    debugLog("Now tracking " + (string)(llGetListLength(tracked_avatars) / STRIDE) + " avatars");
+    debugLog("Config updated: now tracking " + (string)(llGetListLength(tracked_avatars) / STRIDE) + " avatars");
     updateHoverText();
 }
 

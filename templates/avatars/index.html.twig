@@ -352,9 +352,9 @@ function hideDeleteModal() {
 function confirmDelete() {
     if (!deleteModalAvatarKey) return;
     
-    fetch('/api/avatars/' + deleteModalAvatarKey, {
+    fetch('/avatars/' + deleteModalAvatarKey, {
         method: 'DELETE',
-        headers: { 'X-API-Key': 'toralapikey' }
+        credentials: 'same-origin'
     })
     .then(function(response) {
         if (!response.ok) throw new Error('Failed to delete');
