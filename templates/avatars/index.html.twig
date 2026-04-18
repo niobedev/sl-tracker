@@ -70,15 +70,16 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <select onchange="setChannel('{{ avatar.avatarKey }}', this.value)"
-                                class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">None</option>
-                            {% for channel in channels %}
-                            <option value="{{ channel.id }}" {% if avatar.notificationChannel and avatar.notificationChannel.id == channel.id %}selected{% endif %}>
-                                {{ channel.name }} ({{ channel.type }})
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-900 dark:text-white">
+                                {% if avatar.notificationChannel %}{{ avatar.notificationChannel.name }} ({{ avatar.notificationChannel.type }}){% else %}None{% endif %}
+                            </span>
+                            <button type="button"
+                                    onclick="showChannelModal('{{ avatar.avatarKey }}')"
+                                    class="text-xs text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                                Edit
+                            </button>
+                        </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         <time datetime="{{ avatar.createdAt|date('Y-m-d\\TH:i:s\\Z') }}" data-local>
@@ -90,7 +91,7 @@
                            class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                             View Details
                         </a>
-                        <button type="button" onclick="deleteAvatar('{{ avatar.avatarKey }}')"
+                        <button type="button" onclick="showDeleteModal('{{ avatar.avatarKey }}', '{{ profile.name|default(avatar.avatarKey) }}')"
                                 class="ml-4 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
                             Delete
                         </button>
@@ -163,6 +164,72 @@
     </div>
 </div>
 
+<!-- Channel Edit Modal -->
+<div id="channelModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Notification Channel</h3>
+                <button onclick="hideChannelModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Select a notification channel for this avatar:</p>
+            <div id="channelList" class="space-y-2 mb-6">
+                {% for channel in channels %}
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <input type="radio" name="selectedChannel" value="{{ channel.id }}" class="h-4 w-4 text-indigo-600">
+                    <span class="text-sm text-gray-900 dark:text-white">{{ channel.name }} ({{ channel.type }})</span>
+                </label>
+                {% endfor %}
+                <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <input type="radio" name="selectedChannel" value="" class="h-4 w-4 text-indigo-600">
+                    <span class="text-sm text-gray-900 dark:text-white">None</span>
+                </label>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="hideChannelModal()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="button" onclick="saveChannelFromModal()"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Delete Avatar</h3>
+                <button onclick="hideDeleteModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <p id="deleteModalText" class="text-sm text-gray-500 dark:text-gray-400 mb-6"></p>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="hideDeleteModal()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmDelete()"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function showAddModal() {
     document.getElementById('addModal').classList.remove('hidden');
@@ -231,47 +298,79 @@ async function toggleTracking(avatarKey, enabled) {
     }
 }
 
-async function setChannel(avatarKey, channelId) {
-    try {
-        const response = await fetch(`/avatars/${avatarKey}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ notificationChannelId: channelId || null })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to update notification channel');
-        }
-    } catch (error) {
-        alert('Error: ' + error.message);
-        window.location.reload();
+// Channel modal functions
+let channelModalAvatarKey = null;
+
+function showChannelModal(avatarKey) {
+    channelModalAvatarKey = avatarKey;
+    const radios = document.getElementsByName('selectedChannel');
+    for (var radio of radios) {
+        radio.checked = false;
     }
+    document.getElementById('channelModal').classList.remove('hidden');
 }
 
-async function deleteAvatar(avatarKey) {
-    if (!confirm('Are you sure you want to stop tracking this avatar?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/avatars/${avatarKey}`, {
-            method: 'DELETE',
-            headers: {
-                'X-API-Key': 'toralapikey'
-            }
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to delete avatar');
-        }
-        
-        window.location.reload();
-    } catch (error) {
-        alert('Error: ' + error.message);
-    }
+function hideChannelModal() {
+    document.getElementById('channelModal').classList.add('hidden');
+    channelModalAvatarKey = null;
 }
+
+function saveChannelFromModal() {
+    var selected = document.querySelector('input[name="selectedChannel"]:checked');
+    if (!selected) return;
+    
+    var channelId = selected.value;
+    
+    fetch('/avatars/' + channelModalAvatarKey, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationChannelId: channelId || null })
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Failed to save');
+        window.location.reload();
+    })
+    .catch(function(error) {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Delete modal functions
+let deleteModalAvatarKey = null;
+
+function showDeleteModal(avatarKey, avatarName) {
+    deleteModalAvatarKey = avatarKey;
+    document.getElementById('deleteModalText').textContent = 'Are you sure you want to stop tracking ' + avatarName + '? This will remove all tracked data.';
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    deleteModalAvatarKey = null;
+}
+
+function confirmDelete() {
+    if (!deleteModalAvatarKey) return;
+    
+    fetch('/api/avatars/' + deleteModalAvatarKey, {
+        method: 'DELETE',
+        headers: { 'X-API-Key': 'toralapikey' }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Failed to delete');
+        window.location.reload();
+    })
+    .catch(function(error) {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideChannelModal();
+        hideDeleteModal();
+    }
+});
 </script>
 {% endblock %}
