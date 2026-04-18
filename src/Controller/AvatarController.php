@@ -78,7 +78,7 @@ class AvatarController extends AbstractController
         } catch (\InvalidArgumentException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
-            return $this->json(['error' => 'Avatar is already being tracked'], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'Avatar is already being tracked', 'exception' => $e->getMessage()], Response::HTTP_CONFLICT);
         } catch (\RuntimeException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_CONFLICT);
         }

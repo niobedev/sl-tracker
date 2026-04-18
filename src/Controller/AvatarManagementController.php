@@ -55,7 +55,7 @@ class AvatarManagementController extends AbstractController
                 ] : null,
             ], Response::HTTP_CREATED);
         } catch (\InvalidArgumentException|\Doctrine\DBAL\Exception\UniqueConstraintViolationException $e) {
-            return $this->json(['error' => 'Avatar is already being tracked'], Response::HTTP_CONFLICT);
+            return $this->json(['error' => 'Avatar is already being tracked', 'exception' => $e->getMessage()], Response::HTTP_CONFLICT);
         } catch (\RuntimeException $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_CONFLICT);
         }
