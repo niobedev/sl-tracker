@@ -310,10 +310,31 @@ sl-tracker/
 
 ## Deployment
 
+### Example Production Compose (docker-compose.prod.yml)
+
+```yaml
+services:
+  app:
+    image: ghcr.io/niobedev/toral-house-dashboard:latest
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET}
+      DATABASE_URL: ${DATABASE_URL}
+      API_SECRET_KEY: ${API_SECRET_KEY}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    # ... your MySQL config
+```
+
 ### Production Build
 
 ```bash
-# Build production image
+# Build production image locally
 make prod-build
 
 # Push to registry

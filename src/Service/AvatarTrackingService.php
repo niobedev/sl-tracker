@@ -46,7 +46,7 @@ class AvatarTrackingService
 
     public function removeAvatar(string $avatarKey): void
     {
-        $avatar = $this->trackedAvatarRepository->find(strtolower($avatarKey));
+        $avatar = $this->trackedAvatarRepository->findOneByAvatarKey(strtolower($avatarKey));
         if (!$avatar) {
             throw new \RuntimeException("Avatar {$avatarKey} is not being tracked");
         }

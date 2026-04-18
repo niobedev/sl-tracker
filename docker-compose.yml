@@ -13,6 +13,7 @@ services:
       APP_ENV: dev
       APP_SECRET: ${APP_SECRET}
       DATABASE_URL: mysql://app:${MYSQL_PASSWORD}@mysql:3306/house_visits?serverVersion=8.0&charset=utf8mb4
+      API_SECRET_KEY: ${API_SECRET_KEY:-toralapikey}
     depends_on:
       mysql:
         condition: service_healthy

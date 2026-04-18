@@ -18,7 +18,7 @@ make test-coverage   # Run tests with coverage report
 
 ## Architecture
 
-**Single-container production model**: php-fpm + caddy run together under supervisord (no separate scheduler anymore - Google Sheets sync was removed).
+**Single-container production model**: php-fpm + caddy run together under supervisord.
 
 **Data flow**: LSL script → POST /api/events → MySQL → Notifications → Telegram
 
@@ -31,15 +31,6 @@ make test-coverage   # Run tests with coverage report
 ## Testing
 
 - PHPUnit 10, test base class: `App\Tests\ApiTestCase`
-- Tests in `tests/Api/` (endpoint tests) and `tests/Service/` (service tests)
-- Test environment uses SQLite in-memory database
-- API key in tests: `test-api-key-12345` (set in phpunit.xml.dist)
-
-## Recent Changes
-
-This project was recently reworked from a Google Sheets-based system to an API-based system. Some old code references may still exist:
-- Removed: `SyncState` entity/repo, `GoogleSheetsService`, `SheetSyncService`, `SyncSheetCommand`
-- Old terminology in code/comments may still refer to "visits" or "join/quit" instead of "sessions" or "login/logout"
 
 ## Database Migrations
 
@@ -61,6 +52,20 @@ Migrations are in `migrations/` and follow Doctrine migrations naming: `VersionY
 ## LSL Scripts
 
 Located in `lsl/` directory. Use `llRequestAgentData(k, DATA_ONLINE)` for global avatar tracking (not region-restricted). Script polls `/api/tracking-config` every 60s to get the list of avatars to track.
+
+## Production Deployment
+
+```bash
+# Build production image locally
+make prod-build
+
+# Push to GitHub Container Registry
+make prod-push
+
+# On production server, pull and restart
+docker pull ghcr.io/niobedev/toral-house-dashboard:latest
+docker compose up -d
+```
 
 ## Environment Variables
 
