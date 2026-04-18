@@ -195,7 +195,7 @@ class ApiController extends AbstractController
 
     private function processEvent(array $event): bool
     {
-        $requiredFields = ['event_ts', 'action', 'avatarKey', 'displayName'];
+        $requiredFields = ['event_ts', 'action', 'avatarKey'];
         foreach ($requiredFields as $field) {
             if (!isset($event[$field])) {
                 return false;
@@ -221,7 +221,7 @@ class ApiController extends AbstractController
         $entity = new Event();
         $entity->setAction($action);
         $entity->setAvatarKey($avatarKey);
-        $entity->setDisplayName(trim($event['displayName']));
+        $entity->setDisplayName(isset($event['displayName']) ? trim($event['displayName']) : $avatarKey);
         $entity->setUsername(isset($event['username']) && $event['username'] !== '' ? trim($event['username']) : '');
         $entity->setEventTs($eventTs);
         $entity->setRegionName($event['regionName'] ?? 'global');

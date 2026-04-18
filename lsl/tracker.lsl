@@ -39,8 +39,20 @@ integer poll_cursor = 0;
 
 // ========== HTTP HELPERS ==========
 
+debugLog(string msg) {
+    integer len = llStringLength(msg);
+    integer chunkLen = 250;
+    integer i;
+    for (i = 0; i < len; i += chunkLen) {
+        integer end = i + chunkLen;
+        if (end > len) end = len;
+        llOwnerSay("DEBUG: " + llGetSubString(msg, i, end - 1));
+    }
+}
+
 key httpGet(string url) {
     if (DEBUG) llOwnerSay("DEBUG: GET " + url);
+    if (DEBUG) debugLog("DEBUG: GET full URL: " + url);
     return llHTTPRequest(
         url,
         [
@@ -53,7 +65,7 @@ key httpGet(string url) {
 }
 
 key httpPost(string url, string body) {
-    if (DEBUG) llOwnerSay("DEBUG: POST " + url + " body=" + llGetSubString(body, 0, 100));
+    if (DEBUG) debugLog("POST " + url + " body=" + body);
     return llHTTPRequest(
         url,
         [
@@ -234,24 +246,18 @@ processAvatarStatus(integer idx, integer isOnline) {
     else action = "logout";
     if (DEBUG) llOwnerSay("DEBUG: " + action + " detected for " + uuid);
 
-    // Request name, then send event once we have it
-    key nameKey = llRequestAgentData((key)uuid, DATA_NAME);
-    pending_name_queries += [nameKey, uuid, action];
+    sendEvent(uuid, action);
 
     tracked_avatars = llListReplaceList(tracked_avatars, [isOnline], idx + 1, idx + 1);
     updateHoverText();
 }
 
-sendEvent(string uuid, string action, string displayName) {
+sendEvent(string uuid, string action) {
     string isoTime = llGetTimestamp();  // already ISO 8601 UTC
-
-    // Escape any double quotes in displayName defensively
-    string safeName = escapeJson(displayName);
 
     string json = "[{\"event_ts\":\"" + isoTime + "\","
                 + "\"action\":\"" + action + "\","
                 + "\"avatarKey\":\"" + uuid + "\","
-                + "\"displayName\":\"" + safeName + "\","
                 + "\"regionName\":\"global\"}]";
 
     httpPost(API_URL + "/api/events", json);
@@ -381,15 +387,7 @@ default {
             string uuid = llList2String(pending_name_queries, nameIdx + 1);
             string action = llList2String(pending_name_queries, nameIdx + 2);
 
-            // DATA_NAME returns legacy username like "firstname.lastname" or
-            // "Firstname Lastname". It is NOT the display name — LSL has no
-            // direct way to fetch display name. Backend should resolve it if
-            // needed.
-            list nameParts = llParseString2List(data, [" "], []);
-            string displayName = llList2String(nameParts, 0);
-            if (displayName == "") displayName = data;
-
-            sendEvent(uuid, action, displayName);
+            sendEvent(uuid, action);
 
             pending_name_queries = llDeleteSubList(
                 pending_name_queries, nameIdx, nameIdx + NAME_STRIDE - 1);
