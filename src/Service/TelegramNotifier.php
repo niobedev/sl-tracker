@@ -3,120 +3,26 @@
 namespace App\Service;
 
 use App\Entity\NotificationChannel;
-use App\Entity\TrackedAvatar;
-use App\Repository\AvatarProfileRepository;
-use Monolog\Attribute\WithMonologChannel;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-#[WithMonologChannel('notification')]
-class TelegramNotifier implements NotificationChannelInterface
+class TelegramNotifier extends AbstractNotifier
 {
-    public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly AvatarProfileRepository $profileRepository,
-        private readonly LoggerInterface $logger,
-    ) {}
-
-    public function sendLogin(TrackedAvatar $avatar, array $event): void
+    protected function parseConfig(array $config): array
     {
-        $channel = $avatar->getNotificationChannel();
-        if (!$channel || !$channel->isEnabled()) {
-            return;
-        }
-
-        $config = $channel->getConfig();
         $botToken = $config['bot_token'] ?? null;
         $chatId = $config['chat_id'] ?? null;
 
-        if (!$botToken || !$chatId) {
-            return;
-        }
-
-        $avatarKey = $avatar->getAvatarKey();
-        $name = $avatarKey;
-        $username = '';
-
-        if (isset($event['displayName'])) {
-            $name = $event['displayName'];
-        }
-        if (isset($event['username'])) {
-            $username = $event['username'];
-        } else {
-            $profile = $this->profileRepository->find($avatarKey);
-            if ($profile && $profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
-        }
-
-        $message = sprintf(
-            "🟢 %s (%s) has logged in.",
-            $name,
-            $username ?: 'unknown'
-        );
-
-        $this->sendMessage($avatarKey, 'login', $botToken, $chatId, $message, $event);
+        return [
+            'valid' => (bool) $botToken && $chatId,
+            'bot_token' => $botToken,
+            'chat_id' => $chatId,
+        ];
     }
 
-    public function sendLogout(TrackedAvatar $avatar, array $event): void
-    {
-        $channel = $avatar->getNotificationChannel();
-        if (!$channel || !$channel->isEnabled()) {
-            return;
-        }
-
-        $config = $channel->getConfig();
-        $botToken = $config['bot_token'] ?? null;
-        $chatId = $config['chat_id'] ?? null;
-
-        if (!$botToken || !$chatId) {
-            return;
-        }
-
-        $avatarKey = $avatar->getAvatarKey();
-        $name = $avatarKey;
-        $username = '';
-
-        if (isset($event['displayName'])) {
-            $name = $event['displayName'];
-        }
-        if (isset($event['username'])) {
-            $username = $event['username'];
-        } else {
-            $profile = $this->profileRepository->find($avatarKey);
-            if ($profile && $profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
-        }
-
-        $message = sprintf(
-            "🔴 %s (%s) has logged out.",
-            $name,
-            $username ?: 'unknown'
-        );
-
-        $this->sendMessage($avatarKey, 'logout', $botToken, $chatId, $message, $event);
-    }
-
-    public function test(NotificationChannel $channel): bool
-    {
-        $config = $channel->getConfig();
-        $botToken = $config['bot_token'] ?? null;
-        $chatId = $config['chat_id'] ?? null;
-
-        if (!$botToken || !$chatId) {
-            return false;
-        }
-
-        $message = "✅ Test notification from Avatar Tracking System";
-        return $this->sendMessage($channel->getName(), 'test', $botToken, $chatId, $message, []);
-    }
-
-    private function sendMessage(string $avatarKey, string $action, string $botToken, string $chatId, string $message, array $event): bool
+    protected function send(string $avatarKey, string $action, string $message, array $event, array $parsedConfig): bool
     {
         $context = [
             'channel_type' => 'telegram',
-            'channel_id' => $chatId,
+            'channel_id' => $parsedConfig['chat_id'],
             'avatar_key' => $avatarKey,
             'action' => $action,
             'event' => $event,
@@ -124,9 +30,9 @@ class TelegramNotifier implements NotificationChannelInterface
         ];
 
         try {
-            $response = $this->httpClient->request('POST', "https://api.telegram.org/bot{$botToken}/sendMessage", [
+            $response = $this->httpClient->request('POST', "https://api.telegram.org/bot{$parsedConfig['bot_token']}/sendMessage", [
                 'json' => [
-                    'chat_id' => $chatId,
+                    'chat_id' => $parsedConfig['chat_id'],
                     'text' => $message,
                     'parse_mode' => 'HTML'
                 ],
@@ -157,5 +63,18 @@ class TelegramNotifier implements NotificationChannelInterface
             ]));
             return false;
         }
+    }
+
+    public function test(NotificationChannel $channel): bool
+    {
+        $config = $channel->getConfig();
+        $parsedConfig = $this->parseConfig($config);
+
+        if (!$parsedConfig['valid']) {
+            return false;
+        }
+
+        $message = "✅ Test notification from Avatar Tracking System";
+        return $this->send($channel->getName(), 'test', $message, [], $parsedConfig);
     }
 }

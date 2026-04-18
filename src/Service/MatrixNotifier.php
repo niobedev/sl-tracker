@@ -3,124 +3,29 @@
 namespace App\Service;
 
 use App\Entity\NotificationChannel;
-use App\Entity\TrackedAvatar;
-use App\Repository\AvatarProfileRepository;
-use Monolog\Attribute\WithMonologChannel;
-use Psr\Log\LoggerInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-#[WithMonologChannel('notification')]
-class MatrixNotifier implements NotificationChannelInterface
+class MatrixNotifier extends AbstractNotifier
 {
-    public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly AvatarProfileRepository $profileRepository,
-        private readonly LoggerInterface $logger,
-    ) {}
-
-    public function sendLogin(TrackedAvatar $avatar, array $event): void
+    protected function parseConfig(array $config): array
     {
-        $channel = $avatar->getNotificationChannel();
-        if (!$channel || !$channel->isEnabled()) {
-            return;
-        }
-
-        $config = $channel->getConfig();
         $serverUrl = $config['server_url'] ?? null;
         $roomId = $config['room_id'] ?? null;
         $botToken = $config['bot_token'] ?? null;
 
-        if (!$serverUrl || !$roomId || !$botToken) {
-            return;
-        }
-
-        $avatarKey = $avatar->getAvatarKey();
-        $name = $avatarKey;
-        $username = '';
-
-        if (isset($event['displayName'])) {
-            $name = $event['displayName'];
-        }
-        if (isset($event['username'])) {
-            $username = $event['username'];
-        } else {
-            $profile = $this->profileRepository->find($avatarKey);
-            if ($profile && $profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
-        }
-
-        $message = sprintf(
-            "🟢 %s (%s) has logged in.",
-            $name,
-            $username ?: 'unknown'
-        );
-
-        $this->sendMessage($avatarKey, 'login', $serverUrl, $roomId, $botToken, $message, $event);
+        return [
+            'valid' => (bool) $serverUrl && $roomId && $botToken,
+            'server_url' => $serverUrl,
+            'room_id' => $roomId,
+            'bot_token' => $botToken,
+        ];
     }
 
-    public function sendLogout(TrackedAvatar $avatar, array $event): void
-    {
-        $channel = $avatar->getNotificationChannel();
-        if (!$channel || !$channel->isEnabled()) {
-            return;
-        }
-
-        $config = $channel->getConfig();
-        $serverUrl = $config['server_url'] ?? null;
-        $roomId = $config['room_id'] ?? null;
-        $botToken = $config['bot_token'] ?? null;
-
-        if (!$serverUrl || !$roomId || !$botToken) {
-            return;
-        }
-
-        $avatarKey = $avatar->getAvatarKey();
-        $name = $avatarKey;
-        $username = '';
-
-        if (isset($event['displayName'])) {
-            $name = $event['displayName'];
-        }
-        if (isset($event['username'])) {
-            $username = $event['username'];
-        } else {
-            $profile = $this->profileRepository->find($avatarKey);
-            if ($profile && $profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
-        }
-
-        $message = sprintf(
-            "🔴 %s (%s) has logged out.",
-            $name,
-            $username ?: 'unknown'
-        );
-
-        $this->sendMessage($avatarKey, 'logout', $serverUrl, $roomId, $botToken, $message, $event);
-    }
-
-    public function test(NotificationChannel $channel): bool
-    {
-        $config = $channel->getConfig();
-        $serverUrl = $config['server_url'] ?? null;
-        $roomId = $config['room_id'] ?? null;
-        $botToken = $config['bot_token'] ?? null;
-
-        if (!$serverUrl || !$roomId || !$botToken) {
-            return false;
-        }
-
-        $message = "✅ Test notification from Avatar Tracking System";
-        return $this->sendMessage($channel->getName(), 'test', $serverUrl, $roomId, $botToken, $message, []);
-    }
-
-    private function sendMessage(string $avatarKey, string $action, string $serverUrl, string $roomId, string $botToken, string $message, array $event): bool
+    protected function send(string $avatarKey, string $action, string $message, array $event, array $parsedConfig): bool
     {
         $context = [
             'channel_type' => 'matrix',
-            'server_url' => $serverUrl,
-            'room_id' => $roomId,
+            'server_url' => $parsedConfig['server_url'],
+            'room_id' => $parsedConfig['room_id'],
             'avatar_key' => $avatarKey,
             'action' => $action,
             'event' => $event,
@@ -128,12 +33,12 @@ class MatrixNotifier implements NotificationChannelInterface
         ];
 
         try {
-            $txnId = md5($roomId . time() . random_bytes(4));
-            $url = rtrim($serverUrl, '/') . "/_matrix/client/v3/rooms/{$roomId}/send/m.room.message/{$txnId}";
+            $txnId = md5($parsedConfig['room_id'] . time() . random_bytes(4));
+            $url = rtrim($parsedConfig['server_url'], '/') . "/_matrix/client/v3/rooms/{$parsedConfig['room_id']}/send/m.room.message/{$txnId}";
 
             $response = $this->httpClient->request('PUT', $url, [
                 'headers' => [
-                    'Authorization' => "Bearer {$botToken}",
+                    'Authorization' => "Bearer {$parsedConfig['bot_token']}",
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
@@ -167,5 +72,18 @@ class MatrixNotifier implements NotificationChannelInterface
             ]));
             return false;
         }
+    }
+
+    public function test(NotificationChannel $channel): bool
+    {
+        $config = $channel->getConfig();
+        $parsedConfig = $this->parseConfig($config);
+
+        if (!$parsedConfig['valid']) {
+            return false;
+        }
+
+        $message = "✅ Test notification from Avatar Tracking System";
+        return $this->send($channel->getName(), 'test', $message, [], $parsedConfig);
     }
 }

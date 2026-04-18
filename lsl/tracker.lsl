@@ -1,4 +1,4 @@
-// Avatar Tracking System - LSL Script (FIXED)
+// Avatar Tracking System - LSL Script (FIXED v2)
 // Tracks avatar login/logout events using llRequestAgentData(DATA_ONLINE).
 //
 // IMPORTANT LIMITATION:
@@ -6,40 +6,37 @@
 //   - Avatars who are friends of the script owner AND have granted
 //     "see my online status" permission, OR
 //   - Avatars in a region where the owner is estate manager/owner.
-// For arbitrary avatars it will typically return "0" regardless of real status.
-// If this system appears to never detect logins, this is almost certainly why.
+// For arbitrary avatars it typically returns "0" regardless of real status.
 
 // ========== CONFIGURATION ==========
 string API_URL = "https://your-domain.com";
 string API_KEY = "your-api-key-here";
-float CONFIG_POLL_INTERVAL = 60.0;   // How often to fetch config (seconds)
-float AVATAR_CHECK_INTERVAL = 60.0;  // How often to check avatar status (seconds)
+float CONFIG_POLL_INTERVAL = 60.0;
+float AVATAR_CHECK_INTERVAL = 60.0;
 integer DEBUG = TRUE;
 
-// DATA_ONLINE throttle: ~100 requests / 20 seconds per script. To stay safe
-// we batch and spread queries. This is the max we will fire per poll tick.
+// If TRUE, a login event is emitted the first time we observe an avatar as
+// online (i.e. on the -1 -> 1 transition at startup). Useful for testing and
+// also often what you actually want so you don't miss people already online
+// when the script was reset.
+integer EMIT_INITIAL_ONLINE = FALSE;
+
+// DATA_ONLINE throttle: ~100 requests / 20 seconds per script.
 integer MAX_QUERIES_PER_POLL = 20;
 
 // ========== STATE ==========
 list tracked_avatars = [];   // strided: [uuid, onlineStatus, displayName, pendingOnlineQuery]
-                             // onlineStatus: -1 unknown, 0 offline, 1 online
 integer STRIDE = 4;
 
-// Pending DATA_NAME queries, strided: [queryId, uuid, action]
-list pending_name_queries = [];
-integer NAME_STRIDE = 3;
-
 integer config_version = -1;
-float last_config_check = -9999.0;   // Force immediate fetch on first tick
-float last_avatar_check = -9999.0;   // Force immediate poll on first tick
-
-// Round-robin index into tracked_avatars so we don't blow the DATA_ONLINE
-// throttle when tracking many avatars.
+float last_config_check = -9999.0;
+float last_avatar_check = -9999.0;
 integer poll_cursor = 0;
 
-// ========== HTTP HELPERS ==========
+// ========== DEBUG ==========
 
 debugLog(string msg) {
+    if (!DEBUG) return;
     integer len = llStringLength(msg);
     integer chunkLen = 250;
     integer i;
@@ -50,9 +47,10 @@ debugLog(string msg) {
     }
 }
 
+// ========== HTTP HELPERS ==========
+
 key httpGet(string url) {
-    if (DEBUG) llOwnerSay("DEBUG: GET " + url);
-    if (DEBUG) debugLog("DEBUG: GET full URL: " + url);
+    debugLog("GET " + url);
     return llHTTPRequest(
         url,
         [
@@ -65,7 +63,7 @@ key httpGet(string url) {
 }
 
 key httpPost(string url, string body) {
-    if (DEBUG) debugLog("POST " + url + " body=" + body);
+    debugLog("POST " + url + " body=" + body);
     return llHTTPRequest(
         url,
         [
@@ -85,38 +83,34 @@ fetchConfig() {
 }
 
 processConfig(string body) {
-    // Expected: {"trackedAvatars":["uuid1","uuid2"],"version":123,"pollInterval":60}
-
-    // --- Extract trackedAvatars array ---
     string needle = "\"trackedAvatars\":[";
-    integer needleLen = llStringLength(needle);  // 18, not 17
+    integer needleLen = llStringLength(needle);
     integer start = llSubStringIndex(body, needle);
     if (start == -1) {
-        if (DEBUG) llOwnerSay("DEBUG: No trackedAvatars in config");
+        debugLog("No trackedAvatars in config");
         return;
     }
     start = start + needleLen;
 
     integer end = llSubStringIndex(llGetSubString(body, start, -1), "]");
     if (end == -1) {
-        if (DEBUG) llOwnerSay("DEBUG: Malformed trackedAvatars array");
+        debugLog("Malformed trackedAvatars array");
         return;
     }
 
     string arrayStr = llGetSubString(body, start, start + end - 1);
 
-    // --- Parse UUIDs ---
     list newAvatars = [];
     integer i = 0;
     integer len = llStringLength(arrayStr);
 
     while (i < len) {
         integer quote1 = llSubStringIndex(llGetSubString(arrayStr, i, -1), "\"");
-        if (quote1 == -1) i = len; // break
+        if (quote1 == -1) i = len;
         else {
             integer subStart = i + quote1 + 1;
             integer quote2 = llSubStringIndex(llGetSubString(arrayStr, subStart, -1), "\"");
-            if (quote2 == -1) i = len; // break
+            if (quote2 == -1) i = len;
             else {
                 string uuid = llGetSubString(arrayStr, subStart, subStart + quote2 - 1);
                 uuid = llToLower(llStringTrim(uuid, STRING_TRIM));
@@ -126,12 +120,11 @@ processConfig(string body) {
         }
     }
 
-    // --- Extract version ---
     needle = "\"version\":";
-    needleLen = llStringLength(needle);  // 10
+    needleLen = llStringLength(needle);
     start = llSubStringIndex(body, needle);
     if (start == -1) {
-        if (DEBUG) llOwnerSay("DEBUG: No version field; applying avatar list anyway");
+        debugLog("No version field; applying avatar list anyway");
         updateAvatarList(newAvatars);
         return;
     }
@@ -143,7 +136,7 @@ processConfig(string body) {
     if (comma != -1 && (comma < closeBrace || closeBrace == -1)) endVer = comma;
     else if (closeBrace != -1) endVer = closeBrace;
     if (endVer == -1) {
-        if (DEBUG) llOwnerSay("DEBUG: Can't locate end of version field");
+        debugLog("Can't locate end of version field");
         return;
     }
 
@@ -151,15 +144,14 @@ processConfig(string body) {
     integer newVersion = (integer)verStr;
 
     if (newVersion != config_version) {
-        if (DEBUG) llOwnerSay("DEBUG: Config version " + (string)config_version + " -> " + (string)newVersion);
+        debugLog("Config version " + (string)config_version + " -> " + (string)newVersion);
         updateAvatarList(newAvatars);
         config_version = newVersion;
     } else {
-        if (DEBUG) llOwnerSay("DEBUG: Config version unchanged: " + (string)config_version);
+        debugLog("Config version unchanged: " + (string)config_version);
     }
 }
 
-// Find the strided index of a uuid in tracked_avatars, or -1.
 integer findAvatarIndex(string uuid) {
     integer n = llGetListLength(tracked_avatars);
     integer i;
@@ -170,29 +162,25 @@ integer findAvatarIndex(string uuid) {
 }
 
 updateAvatarList(list newAvatars) {
-    // Remove avatars no longer in the new list (iterate backwards)
     integer i;
     for (i = llGetListLength(tracked_avatars) - STRIDE; i >= 0; i -= STRIDE) {
         string uuid = llList2String(tracked_avatars, i);
         if (llListFindList(newAvatars, [uuid]) == -1) {
-            if (DEBUG) llOwnerSay("DEBUG: Removing avatar: " + uuid);
+            debugLog("Removing avatar: " + uuid);
             tracked_avatars = llDeleteSubList(tracked_avatars, i, i + STRIDE - 1);
         }
     }
 
-    // Add new avatars
     integer count = llGetListLength(newAvatars);
     for (i = 0; i < count; ++i) {
         string uuid = llList2String(newAvatars, i);
         if (findAvatarIndex(uuid) == -1) {
-            if (DEBUG) llOwnerSay("DEBUG: Adding avatar: " + uuid);
-            // [uuid, onlineStatus=-1, displayName=uuid, pendingOnlineQuery=NULL_KEY]
+            debugLog("Adding avatar: " + uuid);
             tracked_avatars += [uuid, -1, uuid, NULL_KEY];
         }
     }
 
-    if (DEBUG) llOwnerSay("DEBUG: Now tracking " +
-        (string)(llGetListLength(tracked_avatars) / STRIDE) + " avatars");
+    debugLog("Now tracking " + (string)(llGetListLength(tracked_avatars) / STRIDE) + " avatars");
     updateHoverText();
 }
 
@@ -208,7 +196,6 @@ pollAvatars() {
 
     integer fired;
     for (fired = 0; fired < maxThisTick; ++fired) {
-        // Wrap cursor
         if (poll_cursor >= totalAvatars) poll_cursor = 0;
         integer idx = poll_cursor * STRIDE;
         poll_cursor++;
@@ -216,9 +203,10 @@ pollAvatars() {
         string uuid = llList2String(tracked_avatars, idx);
         key k = (key)uuid;
         if (k == NULL_KEY) {
-            if (DEBUG) llOwnerSay("DEBUG: Invalid UUID at index " + (string)idx + ": " + uuid);
+            debugLog("Invalid UUID at index " + (string)idx + ": " + uuid);
         } else {
             key q = llRequestAgentData(k, DATA_ONLINE);
+            debugLog("Polling " + uuid + " -> query " + (string)q);
             tracked_avatars = llListReplaceList(tracked_avatars, [q], idx + 3, idx + 3);
         }
     }
@@ -231,20 +219,27 @@ processAvatarStatus(integer idx, integer isOnline) {
     // Clear pending query slot
     tracked_avatars = llListReplaceList(tracked_avatars, [NULL_KEY], idx + 3, idx + 3);
 
+    debugLog("Status " + uuid + ": was=" + (string)wasOnline + " now=" + (string)isOnline);
+
     if (wasOnline == -1) {
         tracked_avatars = llListReplaceList(tracked_avatars, [isOnline], idx + 1, idx + 1);
-        if (DEBUG) llOwnerSay("DEBUG: Initial status for " + uuid + ": " + (string)isOnline);
         updateHoverText();
+
+        // Optionally emit an event on first observation of online.
+        // This catches avatars who were already online when the script started.
+        if (EMIT_INITIAL_ONLINE && isOnline == 1) {
+            debugLog("Emitting initial login event for " + uuid);
+            sendEvent(uuid, "login");
+        }
         return;
     }
 
     if (wasOnline == isOnline) return;
 
-    // Status changed
     string action;
     if (isOnline) action = "login";
     else action = "logout";
-    if (DEBUG) llOwnerSay("DEBUG: " + action + " detected for " + uuid);
+    debugLog(action + " detected for " + uuid);
 
     sendEvent(uuid, action);
 
@@ -253,7 +248,7 @@ processAvatarStatus(integer idx, integer isOnline) {
 }
 
 sendEvent(string uuid, string action) {
-    string isoTime = llGetTimestamp();  // already ISO 8601 UTC
+    string isoTime = llGetTimestamp();
 
     string json = "[{\"event_ts\":\"" + isoTime + "\","
                 + "\"action\":\"" + action + "\","
@@ -261,23 +256,6 @@ sendEvent(string uuid, string action) {
                 + "\"regionName\":\"global\"}]";
 
     httpPost(API_URL + "/api/events", json);
-}
-
-string escapeJson(string s) {
-    // Minimal JSON string escaping
-    string out = "";
-    integer i;
-    integer n = llStringLength(s);
-    for (i = 0; i < n; ++i) {
-        string c = llGetSubString(s, i, i);
-        if (c == "\\") out += "\\\\";
-        else if (c == "\"") out += "\\\"";
-        else if (c == "\n") out += "\\n";
-        else if (c == "\r") out += "\\r";
-        else if (c == "\t") out += "\\t";
-        else out += c;
-    }
-    return out;
 }
 
 updateHoverText() {
@@ -299,22 +277,11 @@ updateHoverText() {
     llSetText(text, <1,1,1>, 1.0);
 }
 
-// Find strided index of a pending online query by its queryId, or -1.
 integer findPendingOnlineQuery(key qid) {
     integer n = llGetListLength(tracked_avatars);
     integer i;
     for (i = 0; i < n; i += STRIDE) {
         if ((key)llList2String(tracked_avatars, i + 3) == qid) return i;
-    }
-    return -1;
-}
-
-// Find index of pending name query (strided), or -1.
-integer findPendingNameQuery(key qid) {
-    integer n = llGetListLength(pending_name_queries);
-    integer i;
-    for (i = 0; i < n; i += NAME_STRIDE) {
-        if ((key)llList2String(pending_name_queries, i) == qid) return i;
     }
     return -1;
 }
@@ -330,10 +297,10 @@ default {
             llOwnerSay("ERROR: Please configure API_KEY in the script!");
         }
         if (llSubStringIndex(API_URL, "https://") != 0) {
-            llOwnerSay("WARNING: API_URL is not https://; llHTTPRequest may fail for some endpoints.");
+            llOwnerSay("WARNING: API_URL is not https://");
         }
 
-        llSetTimerEvent(5.0); // tick every 5s; actual work gated by intervals
+        llSetTimerEvent(5.0);
         updateHoverText();
     }
 
@@ -361,8 +328,7 @@ default {
 
     http_response(key request_id, integer status, list metadata, string body) {
         if (status != 200) {
-            if (DEBUG) llOwnerSay("DEBUG: HTTP error " + (string)status
-                + ": " + llGetSubString(body, 0, 200));
+            debugLog("HTTP error " + (string)status + ": " + llGetSubString(body, 0, 200));
             return;
         }
 
@@ -372,29 +338,14 @@ default {
         }
 
         if (llSubStringIndex(body, "\"received\"") != -1) {
-            if (DEBUG) llOwnerSay("DEBUG: Events received by server");
+            debugLog("Events received by server");
             return;
         }
 
-        if (DEBUG) llOwnerSay("DEBUG: Unhandled HTTP response: "
-            + llGetSubString(body, 0, 100));
+        debugLog("Unhandled HTTP response: " + llGetSubString(body, 0, 100));
     }
 
     dataserver(key query_id, string data) {
-        // Check name queries FIRST — they're fewer and more specific.
-        integer nameIdx = findPendingNameQuery(query_id);
-        if (nameIdx != -1) {
-            string uuid = llList2String(pending_name_queries, nameIdx + 1);
-            string action = llList2String(pending_name_queries, nameIdx + 2);
-
-            sendEvent(uuid, action);
-
-            pending_name_queries = llDeleteSubList(
-                pending_name_queries, nameIdx, nameIdx + NAME_STRIDE - 1);
-            return;
-        }
-
-        // Otherwise, treat as online-status query.
         integer idx = findPendingOnlineQuery(query_id);
         if (idx != -1) {
             integer isOnline = (data == "1");
@@ -402,7 +353,6 @@ default {
             return;
         }
 
-        if (DEBUG) llOwnerSay("DEBUG: Unmatched dataserver query: "
-            + (string)query_id + " data=" + data);
+        debugLog("Unmatched dataserver query: " + (string)query_id + " data=" + data);
     }
 }
