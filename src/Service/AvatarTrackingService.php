@@ -25,7 +25,7 @@ class AvatarTrackingService
         $existing = $this->trackedAvatarRepository->findOneByAvatarKey($avatarKey);
 
         if ($existing) {
-            throw new \InvalidArgumentException("Avatar {$avatarKey} is already being tracked");
+            throw new \RuntimeException("Avatar {$avatarKey} is already being tracked");
         }
 
         $this->validateUuid($avatarKey);
