@@ -30,23 +30,31 @@ class EventRepository extends ServiceEntityRepository
         $sql = <<<SQL
             WITH paired AS (
                 SELECT
-                    avatar_key, display_name, username, action, event_ts,
+                    avatar_key, action, event_ts,
                     LEAD(event_ts) OVER (PARTITION BY avatar_key ORDER BY event_ts) AS next_ts,
                     LEAD(action)   OVER (PARTITION BY avatar_key ORDER BY event_ts) AS next_action,
                     ROW_NUMBER()   OVER (PARTITION BY avatar_key ORDER BY event_ts DESC) AS rn
                 FROM event
+            ),
+            stats AS (
+                SELECT
+                    avatar_key,
+                    COUNT(CASE WHEN action = 'login' AND next_action = 'logout' THEN 1 END) AS visit_count,
+                    SUM(CASE WHEN action = 'login' AND next_action = 'logout'
+                        THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS total_minutes
+                FROM paired
+                GROUP BY avatar_key
             )
             SELECT
-                avatar_key,
-                MAX(CASE WHEN rn = 1 THEN display_name END) AS display_name,
-                MAX(CASE WHEN rn = 1 THEN username END) AS username,
-                COUNT(CASE WHEN action = 'login' AND next_action = 'logout' THEN 1 END) AS visit_count,
-                SUM(CASE WHEN action = 'login' AND next_action = 'logout'
-                    THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS total_minutes
-            FROM paired
-            GROUP BY avatar_key
-            HAVING visit_count > 0
-            ORDER BY total_minutes DESC
+                s.avatar_key,
+                COALESCE(p.name, s.avatar_key) AS display_name,
+                p.username,
+                s.visit_count,
+                s.total_minutes
+            FROM stats s
+            LEFT JOIN avatar_profile p ON p.avatar_key = s.avatar_key
+            WHERE s.visit_count > 0
+            ORDER BY s.total_minutes DESC
             LIMIT $limit
         SQL;
 
@@ -65,14 +73,22 @@ class EventRepository extends ServiceEntityRepository
         $sql = <<<SQL
             WITH latest AS (
                 SELECT
-                    avatar_key, display_name, action, event_ts,
+                    avatar_key, action, event_ts,
                     ROW_NUMBER() OVER (PARTITION BY avatar_key ORDER BY event_ts DESC) AS rn
                 FROM event
+            ),
+            online AS (
+                SELECT avatar_key, UNIX_TIMESTAMP(event_ts) AS joined_at
+                FROM latest
+                WHERE rn = 1 AND action = 'login'
             )
-            SELECT avatar_key, display_name, UNIX_TIMESTAMP(event_ts) AS joined_at
-            FROM latest
-            WHERE rn = 1 AND action = 'login'
-            ORDER BY event_ts DESC
+            SELECT
+                o.avatar_key,
+                COALESCE(p.name, o.avatar_key) AS display_name,
+                o.joined_at
+            FROM online o
+            LEFT JOIN avatar_profile p ON p.avatar_key = o.avatar_key
+            ORDER BY o.joined_at DESC
         SQL;
 
         return $this->getEntityManager()
@@ -103,12 +119,7 @@ class EventRepository extends ServiceEntityRepository
         };
 
         $sql = <<<SQL
-            WITH latest_names AS (
-                SELECT avatar_key,
-                    FIRST_VALUE(display_name) OVER (PARTITION BY avatar_key ORDER BY event_ts DESC) AS display_name
-                FROM event
-            ),
-            paired AS (
+            WITH paired AS (
                 SELECT
                     avatar_key, action, event_ts,
                     LEAD(event_ts) OVER (PARTITION BY avatar_key ORDER BY event_ts) AS next_ts,
@@ -126,11 +137,17 @@ class EventRepository extends ServiceEntityRepository
                 FROM paired
                 GROUP BY avatar_key
             )
-            SELECT p.avatar_key, ln.display_name, p.visit_count, p.total_minutes, p.last_login
-            FROM period_stats p
-            JOIN (SELECT DISTINCT avatar_key, display_name FROM latest_names) ln USING (avatar_key)
-            WHERE p.last_login IS NOT NULL
-            ORDER BY p.last_login DESC
+            SELECT
+                s.avatar_key,
+                COALESCE(p.name, s.avatar_key) AS display_name,
+                p.username,
+                s.visit_count,
+                s.total_minutes,
+                s.last_login
+            FROM period_stats s
+            LEFT JOIN avatar_profile p ON p.avatar_key = s.avatar_key
+            WHERE s.last_login IS NOT NULL
+            ORDER BY s.last_login DESC
         SQL;
 
         return $this->getEntityManager()
@@ -264,26 +281,37 @@ class EventRepository extends ServiceEntityRepository
         $sql = <<<SQL
             WITH paired AS (
                 SELECT
-                    avatar_key, display_name, username, action, event_ts,
+                    avatar_key, action, event_ts,
                     LEAD(event_ts) OVER (PARTITION BY avatar_key ORDER BY event_ts) AS next_ts,
                     LEAD(action)   OVER (PARTITION BY avatar_key ORDER BY event_ts) AS next_action,
                     ROW_NUMBER()   OVER (PARTITION BY avatar_key ORDER BY event_ts DESC) AS rn
                 FROM event
                 WHERE avatar_key = :key
+            ),
+            stats AS (
+                SELECT
+                    avatar_key,
+                    COUNT(CASE WHEN action = 'login' AND next_action = 'logout' THEN 1 END) AS visit_count,
+                    SUM(CASE WHEN action = 'login' AND next_action = 'logout'
+                        THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS total_minutes,
+                    AVG(CASE WHEN action = 'login' AND next_action = 'logout'
+                        THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS avg_minutes,
+                    MIN(event_ts) AS first_visit,
+                    MAX(event_ts) AS last_visit
+                FROM paired
+                GROUP BY avatar_key
             )
             SELECT
-                avatar_key,
-                MAX(CASE WHEN rn = 1 THEN display_name END) AS display_name,
-                MAX(CASE WHEN rn = 1 THEN username END) AS username,
-                COUNT(CASE WHEN action = 'login' AND next_action = 'logout' THEN 1 END) AS visit_count,
-                SUM(CASE WHEN action = 'login' AND next_action = 'logout'
-                    THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS total_minutes,
-                AVG(CASE WHEN action = 'login' AND next_action = 'logout'
-                    THEN TIMESTAMPDIFF(SECOND, event_ts, next_ts) END) / 60.0 AS avg_minutes,
-                MIN(event_ts) AS first_visit,
-                MAX(event_ts) AS last_visit
-            FROM paired
-            GROUP BY avatar_key
+                s.avatar_key,
+                COALESCE(p.name, s.avatar_key) AS display_name,
+                p.username,
+                s.visit_count,
+                s.total_minutes,
+                s.avg_minutes,
+                s.first_visit,
+                s.last_visit
+            FROM stats s
+            LEFT JOIN avatar_profile p ON p.avatar_key = s.avatar_key
         SQL;
 
         $row = $this->getEntityManager()

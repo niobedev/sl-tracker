@@ -28,4 +28,36 @@ class AvatarProfileRepository extends ServiceEntityRepository
 
         return ($data !== false && $data !== null && $data !== '') ? $data : null;
     }
+
+    public function findNameAndUsername(string $avatarKey): array
+    {
+        $row = $this->getEntityManager()
+            ->getConnection()
+            ->fetchAssociative(
+                'SELECT name, username FROM avatar_profile WHERE avatar_key = ?',
+                [$avatarKey]
+            );
+
+        return $row ?: ['name' => null, 'username' => null];
+    }
+
+    public function findNamesForKeys(array $avatarKeys): array
+    {
+        if (empty($avatarKeys)) {
+            return [];
+        }
+
+        $rows = $this->getEntityManager()
+            ->getConnection()
+            ->fetchAllAssociative(
+                'SELECT avatar_key, name, username FROM avatar_profile WHERE avatar_key IN (?)',
+                [$avatarKeys]
+            );
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['avatar_key']] = $row;
+        }
+        return $result;
+    }
 }
