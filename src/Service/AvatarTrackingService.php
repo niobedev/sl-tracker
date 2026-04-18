@@ -22,7 +22,8 @@ class AvatarTrackingService
     {
         $avatarKey = strtolower($avatarKey);
 
-        $existing = $this->trackedAvatarRepository->find($avatarKey);
+        $existing = $this->trackedAvatarRepository->findOneByAvatarKey($avatarKey);
+
         if ($existing) {
             throw new \InvalidArgumentException("Avatar {$avatarKey} is already being tracked");
         }
