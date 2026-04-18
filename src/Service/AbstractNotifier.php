@@ -38,22 +38,14 @@ abstract class AbstractNotifier implements NotificationChannelInterface
 
         $avatarKey = $avatar->getAvatarKey();
         $name = $avatarKey;
-        $username = '';
 
         $profile = $this->profileRepository->find($avatarKey);
-        if ($profile) {
-            if ($profile->getName()) {
-                $name = $profile->getName();
-            }
-            if ($profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
+
+        if ($profile && $profile->getName()) {
+            $name = $profile->getName();
         }
 
-        $message = sprintf(
-            "🟢 %s (%s) has logged in.",
-            $name,
-            $username ?: 'unknown'
+        $message = sprintf("🟢 %s has logged in.", $name,
         );
 
         $this->send($avatarKey, 'login', $message, $event, $parsedConfig);
@@ -74,23 +66,14 @@ abstract class AbstractNotifier implements NotificationChannelInterface
 
         $avatarKey = $avatar->getAvatarKey();
         $name = $avatarKey;
-        $username = '';
 
         $profile = $this->profileRepository->find($avatarKey);
-        if ($profile) {
-            if ($profile->getName()) {
-                $name = $profile->getName();
-            }
-            if ($profile->getUsername()) {
-                $username = $profile->getUsername();
-            }
+
+        if ($profile && $profile->getName()) {
+            $name = $profile->getName();
         }
 
-        $message = sprintf(
-            "🔴 %s (%s) has logged out.",
-            $name,
-            $username ?: 'unknown'
-        );
+        $message = sprintf("🔴 %s has logged out.", $name,);
 
         $this->send($avatarKey, 'logout', $message, $event, $parsedConfig);
     }
