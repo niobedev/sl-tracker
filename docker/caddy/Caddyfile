@@ -2,6 +2,13 @@
     root * /var/www/html/public
     encode gzip
 
+    # Strip Authelia trusted headers from the client request so they cannot be
+    # spoofed. Authelia (the upstream reverse proxy) re-adds them after auth.
+    request_header -Remote-User
+    request_header -Remote-Name
+    request_header -Remote-Groups
+    request_header -Remote-Email
+
     # Static assets — long cache
     @static {
         path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
