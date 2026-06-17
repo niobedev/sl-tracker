@@ -308,6 +308,53 @@ sl-tracker/
 3. Update `NotificationChannel::$type` enum/validation
 4. Add type-specific config fields in UI
 
+## Authentication
+
+### Built-in Login
+
+By default the app uses its own username/password login page. Create users with:
+
+```bash
+make user name=admin pass=your-password
+```
+
+### Trusted-Header SSO (Authelia, Authentik, oauth2-proxy, etc.)
+
+If you run a reverse proxy that authenticates users and injects a `Remote-User` header, the app can use that instead of showing its own login page.
+
+Set the environment variable:
+
+```env
+AUTHELIA_ENABLED=true
+```
+
+With this set, the app trusts the `Remote-User` header and authenticates whoever the proxy says is logged in. The built-in login page is bypassed entirely.
+
+**Requirements:**
+
+- The user named in `Remote-User` must already exist in the app's database (`make user name=<username>`). Unknown users get a `403`.
+- Your reverse proxy must inject the header only after successful authentication — never pass through a `Remote-User` header supplied by the client directly.
+
+**Reverse proxy configuration**
+
+The app's internal Caddy does not strip or modify these headers, so the responsibility is entirely on the outer proxy. The critical rule: **strip any client-supplied `Remote-User` header before authentication, then inject the trusted value after**.
+
+> **Caddy note:** In Caddy, `request_header` directives are executed *after* `forward_auth` in the handler chain. Do not place `request_header -Remote-User` in the same block as `forward_auth` — it will strip the header that `forward_auth` just set. Instead, rely on your auth provider (e.g. Authelia) overwriting the header via `copy_headers`, which takes precedence.
+
+**Authelia example** (Caddy `forward_auth`):
+
+```caddyfile
+your-app.example.com {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Name Remote-Groups Remote-Email
+    }
+    reverse_proxy http://sl-tracker:80
+}
+```
+
+**oauth2-proxy / Nginx / Traefik** work the same way — consult their docs for injecting `Remote-User` and ensure it is stripped from untrusted client requests before the auth layer runs.
+
 ## Deployment
 
 ### Example Production Compose (docker-compose.prod.yml)
@@ -351,6 +398,7 @@ make prod-push
 - [ ] Set up log rotation
 - [ ] Configure backup for database
 - [ ] Monitor disk space (profile images in DB)
+- [ ] If using SSO: set `AUTHELIA_ENABLED=true` and configure your reverse proxy to inject `Remote-User`
 
 ## Troubleshooting
 
